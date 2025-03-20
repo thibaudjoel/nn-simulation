@@ -118,6 +118,22 @@ def sigma_der(x, alpha=1):
     res[negative] = _negative_sigma_der(x[negative], alpha)
     return res
 
+def sigma_sec_der(x, alpha=1):
+    """
+    Computes the second derivative of the SoftPlus function .
+
+    Parameters:
+    x : array-like or float
+        Input value(s).
+    alpha : float, optional (default=1)
+        Smoothing parameter.
+
+    Returns:
+    ndarray
+        The second derivative of sigma at each x.
+    """
+    return alpha * sigma_der(x, alpha) / (1 + np.exp(alpha * x))
+
 
 def sigma_inv_pos(x, alpha=1):
     """
