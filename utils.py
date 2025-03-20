@@ -118,6 +118,7 @@ def sigma_der(x, alpha=1):
     res[negative] = _negative_sigma_der(x[negative], alpha)
     return res
 
+
 def sigma_sec_der(x, alpha=1):
     """
     Computes the second derivative of the SoftPlus function .
@@ -201,36 +202,6 @@ def stable_softmax(x):
     return exp_x / np.sum(exp_x, axis=0)
 
 
-def inv_Fisher(W, X_n, lamb, lambda_W, lambda_X):
-    d, n = X_n.shape
-    K = W.shape[0]
-    # matrix of outer products of feature vectors
-    inter = np.einsum("ij, jk-> ikj", X_n, X_n.T, order="K").reshape(
-        (d, d * n), order="F"
-    )
-    # matrix of squared derivatives of the activation function
-    sig_der_square = np.power(sigma(W @ X_n), 2)
-    # augment the matrix for multiplication with the outer products of feature vectors
-    factors = np.kron(sig_der_square, np.ones((1, d)))
-
-    F_WW = block_diag(
-        *[
-            np.sum((factors[i, :] * inter).reshape((d, d, n), order="A"), axis=2)
-            for i in range(K)
-        ]
-    ) + lambda_W * np.eye(K * d)
-    F_XX = var_Y(W, X_n) + (lamb + lambda_X) * np.eye(K * n)
-    v_blocks = [
-        np.hstack([np.outer(X_n[:, i], np.eye(K)[:, k]) for i in range(n)])
-        for k in range(K)
-    ]
-    X_augmented = np.vstack(v_blocks)
-    sig_der = np.kron(sigma_der(W @ X_n), np.ones((d, K)))
-    F_WX = sig_der * X_augmented
-    F = np.block([[F_WW, F_WX], [F_WX.T, F_XX]])
-    return np.linalg.inv(F)
-
-
 def metr_tens(W, X_n, lamb, lambda_W):
     d, n = X_n.shape
     K = W.shape[0]
@@ -251,33 +222,6 @@ def metr_tens(W, X_n, lamb, lambda_W):
             [np.zeros((K * n, K * d)), lamb * np.eye(K * n)],
         ]
     )
-
-
-def var_Y(W, X_n):
-    """
-    Computes the variance of `Y`.
-
-    Parameters:
-    -----------
-    W : numpy.ndarray
-        The weight matrix. Shape: (m, n), where m is the number of output units and n is the number of input features.
-
-    X_n : numpy.ndarray
-        The input matrix. Shape: (n, N), where n is the number of input features and N is the number of data samples.
-
-    Returns:
-    --------
-    numpy.ndarray
-        A matrix representing the variance of the output `Y`. Shape: (m, m), where m is the number of output units.
-
-    """
-    eta = sigma(W @ X_n)
-    probabilities = softmax(eta, axis=0)
-    diag = np.diag(probabilities.flatten("F"))
-    n = eta.shape[1]
-    blocks = [np.outer(probabilities[:, i], probabilities[:, i]) for i in range(n)]
-
-    return diag - block_diag(*blocks)
 
 
 def eff_rad(D, Var_ups, F_inv, n):
