@@ -7,25 +7,145 @@ from scipy.optimize import minimize
 
 
 class Experiment:
-    def __init__(self, n, d, K, s_eta, rng):
+    """
+    This class implements methods for sampling synthetic categorical data, optimizing model parameters, and evaluating
+    performance based on likelihood, loss, and prediction error.
+
+    Attributes:
+    -----------
+    lamb : float
+        Regularization coefficient for the structural penalty.
+    lamb_W : float
+        Regularization coefficient for the weight matrix W.
+    lambda_X: float
+        Regularization coefficient for the nuisance parameter X.
+    n : int
+        Number of samples.
+    d : int
+        Number of features.
+    K : int
+        Number of categories.
+    s_eta : float
+        Probability assigned to a high-probability category.
+    rng : numpy.random.Generator
+        Random number generator instance for reproducibility.
+    exp_Y : np.ndarray
+        Expectation of the data.
+    Y : np.ndarray
+        Observed data category labels.
+    W : np.ndarray
+        True weight matrix of shape (K, d).
+    norm_constants : np.ndarray
+        Normalization constants used to sample features.
+    X_n : np.ndarray
+        Feature matrix.
+    W_tilde : np.ndarray
+        Estimated weight matrix during optimization.
+    X_tilde : np.ndarray
+        Estimated nuisance parameter during optimization.
+    pen_logLHs : np.ndarray
+        Penalized log-likelihood values over iterations.
+    logLH_Ws : np.ndarray
+        Log-likelihood values for W over iterations.
+    prediction_err_s : np.ndarray
+        Prediction errors over iterations.
+    iterations : int
+        Number of optimization iterations performed.
+    losses : np.ndarray
+        Loss values over iterations.
+    hist : list
+        History of optimization updates.
+
+    Methods:
+    --------
+    sample_norm_const():
+        Samples normalization constants from a uniform distribution.
+
+    sample_exp_Y():
+        Generates categorical probabilities with an emphasis on a high-probability category.
+
+    sample_Y():
+        Samples categorical labels based on the generated probabilities.
+
+    sample_W():
+        Initializes the weight matrix from a normal distribution.
+
+    sample_features():
+        Computes feature matrix X_n using inverse transformations.
+
+    stand_log_lh_W(W):
+        Computes the standardized log-likelihood for a given weight matrix.
+
+    stand_log_lh(W, X):
+        Computes the standardized log-likelihood including a structural penalty.
+
+    stand_pen_log_lh(W, X):
+        Computes the penalized log-likelihood with additional regularization terms.
+
+    pred_err(W):
+        Computes prediction error using softmax probabilities.
+
+    pred_err_X(X):
+        Computes prediction error given the latent feature representation X.
+
+    loss(W):
+        Computes the Frobenius norm difference between true and estimated W.
+
+    loss_X(X):
+        Computes the Frobenius norm difference between X and its estimated form.
+
+    plot_convergence():
+        Plots the convergence of the penalized log-likelihood over iterations.
+
+    gradient_X(W):
+        Computes the gradient of the loss function with respect to X.
+
+    gradient_W(W, X):
+        Computes the gradient of the loss function with respect to W.
+
+    maximize_newton(max_it=1000, eps=1e-3):
+        Optimizes W and X using the Newton-CG method.
+
+    maximize_cg(max_it=1000, eps=1e-3):
+        Optimizes W and X using the Conjugate Gradient method.
+
+    fisher(x):
+        Computes the Fisher information matrix for second-order optimization.
+
+    var_Y(X):
+        Computes the covariance matrix of multinomially distributed data.
+
+    """
+
+    def __init__(self, n, d, K, s_eta, rng, lamb, lambda_W, lambda_X):
         self.rng = rng
         self.n = n
         self.d = d
         self.K = K
         self.s_eta = s_eta
+        self.lamb = lamb
+        self.lambda_W = lambda_W
+        self.lambda_X = lambda_X
         self.exp_Y = self.sample_exp_Y()
         self.Y = self.sample_Y()
         self.W = self.sample_W()
         self.norm_constants = self.sample_norm_const()
         self.X_n = self.sample_features()
-        self.W_tilde = np.zeros((K, d))
+        self.W_tilde = np.zeros_like(self.W)
         self.X_tilde = np.zeros_like(self.Y)
-        self.pen_logLHs = np.zeros(1)
-        self.logLH_Ws = np.zeros(1)
-        self.prediction_err_s = np.zeros(1)
+        self.prediction_err_s = np.zeros(0)
         self.iterations = 0
-        self.losses = np.zeros(1)
+        self.losses = np.zeros(0)
+        self.losses_X = np.zeros(self.iterations)
         self.hist = []
+        self.W_s = np.zeros(0)
+        self.X_s = np.zeros(0)
+        self.pen_log_LHs = np.zeros(0)
+        self.log_LHs = np.zeros(0)
+        self.log_LH_Ws = np.zeros(0)
+        self.pred_err_s = np.zeros(0)
+        self.pred_err_s_X = np.zeros(0)
+
 
     def sample_norm_const(self):
         """
@@ -37,7 +157,9 @@ class Experiment:
             The sampled normalization constant `C`.
         """
 
-        return 1e-4  # self.rng.uniform(np.log(1e0 * self.K), np.log(1e6 * self.K), size=(1, self.n))
+        return self.rng.uniform(
+            np.log(self.K), np.log(1e1 * self.K), size=(1, self.n)
+        )
 
     def sample_exp_Y(self):
         """
@@ -77,13 +199,15 @@ class Experiment:
         """
 
         # return self.rng.standard_normal((self.K, self.d)) / (np.sqrt(self.d * self.K)) * 1e-2
-        return self.rng.standard_normal((self.K, self.d))  # / np.sqrt(self.d * self.K)
+        return self.rng.standard_normal((self.K, self.d)) / np.sqrt(self.d)
 
     def sample_features(self):
         """
-        Computes the feature matrix X_n
+        Computes the feature matrix X_n.
+        
         Returns:
-            np.ndarray: The feature matrix X_n.
+        --------
+        np.ndarray: The feature matrix X_n.
         """
         X_n = np.linalg.pinv(self.W) @ sigma_inv(
             self.norm_constants
@@ -113,6 +237,7 @@ class Experiment:
         W (ndarray): Weight matrix.
 
         Returns:
+        --------
         float: The computed log-likelihood.
         """
         return (
@@ -120,65 +245,315 @@ class Experiment:
             - np.sum(logsumexp(sigma(W @ self.X_n), axis=0))
         ) / self.n
 
-    def stand_log_lh(self, W, X, lamb):
+    def stand_log_lh(self, W, X):
         """
-        Computes the standardized log-likelihood.
+        Computes the standardized log-likelihood of the full parameter.
 
         Parameters:
-        W (ndarray): Weight matrix.
-        X (ndarray): Current latent variable representation.
-        lamb (float): Regularization coefficient for the structural penalty.
+        W : ndarray
+            Weight matrix.
+        X : ndarray
+            Current latent variable representation.
 
         Returns:
+        --------
         float: The computed log-likelihood.
         """
         return (
             np.sum(self.Y * X)
             - np.sum(logsumexp(X, axis=0))
-            - lamb / 2 * np.linalg.norm(X - sigma(W @ self.X_n), "fro") ** 2
+            - self.lamb / 2 * np.linalg.norm(X - sigma(W @ self.X_n), "fro") ** 2
         ) / self.n
 
-    def stand_pen_log_lh(self, W, X, lamb, lambda_X, lambda_W):
+    def stand_pen_log_lh(self, W, X):
         """
-        Computes the standardized penalized log-likelihood function with additional regularization terms.
+        Computes the standardized penalized log-likelihood of the full parameter.
 
         Parameters:
-        W (ndarray): Weight matrix.
-        X (ndarray): Current latent variable representation.
-        lamb (float): Regularization coefficient for structural penalty.
-        lamb_X (float): Regularization coefficient for X.
-        lamb_W (float): Regularization coefficient for W.
+        W : numpy.ndarray
+            Weight matrix.
+        X : numpy.ndarray
+            Nuisance parameter.
 
         Returns:
+        --------
         float: The penalized log-likelihood.
         """
 
         return (
-            self.stand_log_lh(W, X, lamb)
-            - lambda_X / 2 * np.linalg.norm(X, "fro") ** 2 / self.n
-            - lambda_W / 2 * np.linalg.norm(W, "fro") ** 2 / self.n
+            self.stand_log_lh(W, X, self.lamb)
+            - self.lambda_X / 2 * np.linalg.norm(X, "fro") ** 2 / self.n
+            - self.lambda_W / 2 * np.linalg.norm(W, "fro") ** 2 / self.n
         )
 
-    def pred_err(self, W):
-        return (
-            -np.sum(self.Y * np.log(softmax(sigma(W @ self.X_n)))) / self.n
-        )  # np.linalg.norm(softmax(sigma(W @ self.X_n)) - self.Y, 1) / self.n
+    def cross_entr(self, W):
+        return -np.sum(self.Y * np.log(softmax(sigma(W @ self.X_n), axis=0))) / self.n
 
-    def pred_err_X(self, X):
-        return (
-            -np.sum(self.Y * np.log(softmax(X))) / self.n
-        )  # np.linalg.norm(softmax(X) - self.Y, 1) / self.n
+    def cross_entr_X(self, X):
+        return -np.sum(self.Y * np.log(softmax(X, axis=0))) / self.n
 
     def loss(self, W):
-        return np.linalg.norm(self.W - W, "fro") / np.linalg.norm(self.W, "fro")
+        return np.linalg.norm(self.W - W, "fro")
 
     def loss_X(self, X):
-        return np.linalg.norm(X - sigma(self.W @ self.X_n), "fro") / np.linalg.norm(
-            sigma(self.W @ self.X_n), "fro"
+        return np.linalg.norm(X - sigma(self.W @ self.X_n), "fro")
+
+    def gradient_X(self, W, X):
+        """
+        Computes the gradient of the loss function with respect to the nuisance parameter `X`
+
+        Parameters:
+        -----------
+
+        W : numpy.ndarray
+            The weight matrix. Shape: (K, d)
+
+        X : numpy.ndarray
+            The input matrix. Shape: (K, n)
+
+        lamb : float
+            The scaling factor for the structured loss term.
+
+        lambda_X : float
+            The regularization strength for the input matrix `X`.
+
+        Returns:
+        --------
+        numpy.ndarray
+            The gradient of the loss with respect to the input matrix `X`, including both the structured loss term and the L2 regularization term.
+        """
+        gradient_phi = self.Y - X * softmax(X, axis=0)
+        gradient_struc = -self.lamb * (X - sigma(W @ self.X_n))
+        gradient_ridge = -self.lambda_X * X
+
+        return gradient_phi + gradient_struc + gradient_ridge
+
+    def gradient_W(self, W, X):
+        """
+        Computes the gradient of the loss function with respect to the weight matrix `W`.
+
+        Parameters:
+        -----------
+        W : numpy.ndarray
+            The weight matrix for the model. Shape: (m, n), where m is the number of output units and n is the number of input features.
+
+        X : numpy.ndarray
+            The feature matrix. Shape: (m, N), where m is the number of output units and N is the number of data samples.
+
+        Returns:
+        --------
+        numpy.ndarray
+            The gradient of the loss with respect to the weight matrix `W`. This includes both the structured loss term and the L2 regularization term.
+        """
+        # gradient of structural penalty
+        gradient_struc = self.lamb * np.sum(
+            np.einsum(
+                "ki, ji->ikj",
+                (X - sigma(W @ self.X_n)) * sigma_der(W @ self.X_n),
+                self.X_n,
+                order="C",
+            ),
+            axis=0,
+        )  # sum over i
+        # gradient of ridge penalty
+        gradient_ridge = -self.lambda_W * W
+
+        return gradient_struc + gradient_ridge
+
+    def callback(self, ups):
+        self.hist.append(ups)
+        self.print_status(ups, self.lamb, self.lambda_W, self.lambda_X)
+
+    def sample_W_0(self):
+        # return self.rng.standard_normal((self.K, self.d)) / np.sqrt(self.d**2)
+        return (
+            self.W
+            + self.rng.standard_normal((self.K, self.d))
+            / np.sqrt(self.d * self.K)
+            * 1e1
         )
 
+    def extract_W(self, x):
+        return x[: self.K * self.d].reshape(self.W.shape)
+
+    def extract_X(self, x):
+        return x[self.K * self.d :].reshape(self.Y.shape)
+
+    def gradient_ups(self, vec_W_X):
+        W = self.extract_W(vec_W_X)
+        X = self.extract_X(vec_W_X)
+        return self.vectorize(
+            self.gradient_W(W, X), self.gradient_X(W, X)
+        )
+
+    def vectorize(self, W, X):
+        return np.concatenate((W.flatten(), X.flatten()))
+
+    def print_status(self, ups):
+        W = self.extract_W(ups)
+        X = self.extract_X(ups)
+        print(f"pred_err: {self.cross_entr(W)}")
+        print(f"pred_err_X: {self.cross_entr_X(X)}")
+        print(f"loss: {self.loss(W)}")
+        print(f"loss_X: {self.loss_X(X)}")
+        print(f"-f(x) = {-self.stand_pen_log_lh(W, X)}")
+        print(f"-logLH_W = {-self.stand_log_lh_W(W)}")
+
+    def set_value_hist(self, iterations):
+        self.iterations = iterations
+        self.W_s = np.zeros((self.iterations, self.K, self.d))
+        self.X_s = np.zeros((self.iterations, self.K, self.n))
+        self.losses = np.zeros(self.iterations)
+        self.losses_X = np.zeros(self.iterations)
+        self.pred_err_s = np.zeros(self.iterations)
+        self.pred_err_s_X = np.zeros(self.iterations)
+        self.pen_log_LHs = np.zeros(self.iterations)
+        self.log_LHs = np.zeros(self.iterations)
+        self.log_LH_Ws = np.zeros(self.iterations)
+
+        for i in range(self.iterations):
+            W_tilde = self.hist[i][: self.K * self.d].reshape((self.K, self.d))
+            X_tilde = self.hist[i][self.K * self.d :].reshape((self.K, self.n))
+            self.W_s[i, :, :] = W_tilde
+            self.X_s[i, :, :] = X_tilde
+            self.losses[i] = self.loss(W_tilde)
+            self.losses_X[i] = self.loss_X(X_tilde)
+            self.pred_err_s[i] = self.cross_entr(W_tilde)
+            self.pred_err_s_X[i] = self.cross_entr_X(X_tilde)
+            self.pen_log_LHs[i] = self.stand_pen_log_lh(W_tilde, X_tilde)
+            self.log_LHs[i] = self.stand_log_lh(W_tilde, X_tilde)
+            self.log_LH_Ws[i] = self.stand_log_lh_W(W_tilde)
+
+        self.W_tilde = self.W_s[-1, :, :]
+        self.X_tilde = self.X_s[-1, :, :]
+
+    def maximize_newton(self, max_it=1000, eps=1e-3):
+        W_0 = self.sample_W_0()
+        X_0 = sigma(W_0 @ self.X_n)
+        ups_0 = self.vectorize(W_0, X_0)
+        self.print_status(ups_0)
+
+        res = minimize(
+            fun=lambda ups: -self.stand_pen_log_lh(
+                self.extract_W(ups), self.extract_X(ups)),
+            x0=ups_0,
+            method="Newton-CG",
+            jac=lambda ups: -self.gradient_ups(ups),
+            hess=lambda ups: self.fisher(ups),
+            tol=eps,
+            callback=lambda x: self.callback(x),
+            options={"maxiter": max_it, "disp": True, "return_all": True},
+        )
+
+        self.set_value_hist(res.nit)
+
+    def maximize_cg(self, max_it=10000, gtol=1e-3):
+
+        W_0 = self.sample_W_0()
+        X_0 = sigma(W_0 @ self.X_n)
+        ups_0 = self.vectorize(W_0, X_0)
+        self.print_status(ups_0)
+
+        res = minimize(
+            fun=lambda ups: -self.stand_pen_log_lh(
+                self.extract_W(ups), self.extract_X(ups)
+            ),
+            x0=ups_0,
+            method="CG",
+            jac=lambda ups: -self.gradient_ups(ups),
+            callback=lambda x: self.callback(x),
+            options={
+                "disp": True,
+                "maxiter": max_it,
+                "gtol": gtol,
+                "norm": np.inf,
+                "return_all": True,
+            },
+        )
+
+        self.set_value_hist(res.nit)
+
+    def fisher(self, x):
+        """
+        Computes the Fisher Information Matrix (FIM) for a model with parameters W and X.
+
+        Parameters:
+        -----------
+        x : numpy.ndarray
+            Flattened vector containing both W and X.
+
+        Returns:
+        --------
+        numpy.ndarray
+            The Fisher Information Matrix.
+        """
+        W = x[: self.K * self.d].reshape(self.W.shape)
+        X = x[self.K * self.d :].reshape(self.Y.shape)
+        # matrix of outer products of feature vectors
+        inter = np.einsum("ij, jk-> ikj", self.X_n, self.X_n.T, order="K").reshape(
+            (self.d, self.d * self.n), order="F"
+        )
+        # matrix of squared derivatives of the activation function
+        sig_der_square = np.power(sigma(W @ self.X_n), 2)
+
+        # matrix of structural term
+        non_struct = -self.lamb * (X - sigma(W @ self.X_n)) * sigma_sec_der(W @ self.X_n)
+        # augment the matrix for multiplication with the outer products of feature vectors
+        factors = np.kron(sig_der_square + non_struct, np.ones((1, self.d)))
+
+        F_WW = self.lamb * block_diag(
+            *[
+                np.sum(
+                    (factors[i, :] * inter).reshape(
+                        (self.d, self.d, self.n), order="A"
+                    ),
+                    axis=2,
+                )
+                for i in range(self.K)
+            ]
+        ) + self.lambda_W * np.eye(self.K * self.d)
+        F_XX = self.var_Y(X) + (self.lamb + self.lambda_X) * np.eye(self.K * self.n)
+        v_blocks = [
+            np.hstack(
+                [np.outer(self.X_n[:, i], np.eye(self.K)[:, k]) for i in range(self.n)]
+            )
+            for k in range(self.K)
+        ]
+        X_augmented = np.vstack(v_blocks)
+        sig_der = np.kron(sigma_der(W @ self.X_n), np.ones((self.d, self.K)))
+        F_WX = sig_der * X_augmented
+        F = np.block([[F_WW, F_WX], [F_WX.T, F_XX]])
+
+        return F
+
+    def var_Y(self, X):
+        """
+        Computes the covariance matrix of n multidimensional distributed 
+        random vectors whose expected values are proportional to the exponential
+        of the columns of X.
+
+        Parameters:
+        -----------
+        X : numpy.ndarray, shape (K, n)
+            A matrix where each column represents a probability distribution 
+            (before applying softmax).
+
+        Returns:
+        --------
+        numpy.ndarray, shape (Kn, Kn)
+            The covariance matrix of the random vectors.
+        """
+        probabilities = softmax(X, axis=0)
+        diag = np.diag(probabilities.flatten("F"))
+
+        blocks = [
+            np.outer(probabilities[:, i], probabilities[:, i]) for i in range(self.n)
+        ]
+
+        return diag - block_diag(*blocks)
+    
     def plot_convergence(self):
-        log_lh_optimum = self.stand_log_lh(self.W, sigma(self.W @ self.X_n), lamb=1)
+        log_lh_optimum = self.stand_log_lh(self.W, sigma(self.W @ self.X_n))
         print(log_lh_optimum)
 
         plt.figure(figsize=(4, 3), dpi=300)
@@ -210,213 +585,3 @@ class Experiment:
         plt.show()
         # plt.savefig(f"imgs/convergence_{self.n}_{self.lamb}_{self.lambda_W}_{self.lambda_X}_{self.d}_{self.K}_{self.max_it}_{self.eps_W}_{self.eps_X}_{self.gamma}.png")
         # plt.close()
-
-    def gradient_X(self, W, X, lamb, lambda_X):
-        """
-        Computes the gradient of the loss function with respect to the nuisance parameter `X`
-
-        Parameters:
-        -----------
-
-        W : numpy.ndarray
-            The weight matrix. Shape: (K, d)
-
-        X : numpy.ndarray
-            The input matrix. Shape: (K, n)
-
-        lamb : float
-            The scaling factor for the structured loss term.
-
-        lambda_X : float
-            The regularization strength for the input matrix `X`.
-
-        Returns:
-        --------
-        numpy.ndarray
-            The gradient of the loss with respect to the input matrix `X`, including both the structured loss term and the L2 regularization term.
-        """
-        gradient_phi = self.Y - X * softmax(X, axis=0)
-        gradient_struc = -lamb * (X - sigma(W @ self.X_n))
-        gradient_ridge = -lambda_X * X
-
-        return gradient_phi + gradient_struc + gradient_ridge
-
-    def gradient_W(self, W, X, lamb, lambda_W):
-        """
-        Computes the gradient of the loss function with respect to the weight matrix `W`.
-
-        Parameters:
-        -----------
-        W : numpy.ndarray
-            The weight matrix for the model. Shape: (m, n), where m is the number of output units and n is the number of input features.
-
-        X : numpy.ndarray
-            The feature matrix. Shape: (m, N), where m is the number of output units and N is the number of data samples.
-
-        lamb : float
-            The scaling factor for the structured loss term. Controls the contribution of the structured loss in the final gradient.
-
-        lamb_W : float
-            The regularization strength for the weight matrix `W`. Controls the contribution of the L2 regularization term in the final gradient.
-
-        Returns:
-        --------
-        numpy.ndarray
-            The gradient of the loss with respect to the weight matrix `W`. This includes both the structured loss term and the L2 regularization term.
-        """
-        # gradient of structural penalty
-        gradient_struc = lamb * np.sum(
-            np.einsum(
-                "ki, ji->ikj",
-                (X - sigma(W @ self.X_n)) * sigma_der(W @ self.X_n),
-                self.X_n,
-                order="C",
-            ),
-            axis=0,
-        )  # sum over i
-        # gradient of ridge penalty
-        gradient_ridge = -lambda_W * W
-
-        return gradient_struc + gradient_ridge
-
-    def maximize(self, lamb, lambda_W, lambda_X, max_it=1000, eps=1e-3):
-        def callback(xk):
-            W = xk[: self.K * self.d].reshape(self.W.shape)
-            X = xk[self.K * self.d :].reshape(self.Y.shape)
-            self.hist.append(xk)
-            print(f"pred_err: {self.pred_err(W)}")
-            print(f"pred_err_X: {self.pred_err_X(X)}")
-            print(f"loss: {self.loss(W)}")
-            print(f"loss_X: {self.loss_X(X)}")
-            print(f"f(x) = {-objective(xk)}")
-
-        # W_0 = self.W + self.rng.standard_normal((self.K, self.d)) / np.sqrt(self.d * self.K) *1e-1
-        W_0 = self.sample_W()  # * 1e1
-        X_0 = sigma(W_0 @ self.X_n)
-        x_0 = np.concatenate((W_0.flatten(), X_0.flatten()))
-        grad_x = lambda x: -np.concatenate(
-            (
-                self.gradient_W(
-                    x[: self.K * self.d].reshape(self.W.shape),
-                    x[self.K * self.d :].reshape(self.Y.shape),
-                    lamb,
-                    lambda_W,
-                ).flatten(),
-                self.gradient_X(
-                    x[: self.K * self.d].reshape(self.W.shape),
-                    x[self.K * self.d :].reshape(self.Y.shape),
-                    lamb,
-                    lambda_X,
-                ).flatten(),
-            )
-        )
-        hess_x = lambda x: self.fisher(x, lamb, lambda_W, lambda_X)
-        objective = lambda x: -self.stand_pen_log_lh(
-            x[: self.K * self.d].reshape(self.W.shape),
-            x[self.K * self.d :].reshape(self.Y.shape),
-            lamb,
-            lambda_X,
-            lambda_W,
-        )
-        res = minimize(
-            objective,
-            x_0,
-            args=(),
-            method="Newton-CG",
-            jac=grad_x,
-            hess=hess_x,
-            tol=eps,
-            callback=callback,
-            options={"maxiter": max_it, "disp": True, "return_all": True},
-        )
-
-        self.iterations = res.nit
-        self.W_s = np.zeros((self.iterations, self.K, self.d))
-        self.X_s = np.zeros((self.iterations, self.K, self.n))
-        self.losses = np.zeros(self.iterations)
-        self.losses_X = np.zeros(self.iterations)
-        self.pred_err_s = np.zeros(self.iterations)
-        self.pred_err_s_X = np.zeros(self.iterations)
-        self.pen_log_LHs = np.zeros(self.iterations)
-        self.log_LHs = np.zeros(self.iterations)
-        self.log_LH_Ws = np.zeros(self.iterations)
-
-        for i in range(self.iterations):
-            W_tilde = self.hist[i][: self.K * self.d].reshape((self.K, self.d))
-            X_tilde = self.hist[i][self.K * self.d :].reshape((self.K, self.n))
-            self.W_s[i, :, :] = W_tilde
-            self.X_s[i, :, :] = X_tilde
-            self.losses[i] = self.loss(W_tilde)
-            self.losses_X[i] = self.loss_X(X_tilde)
-            self.pred_err_s[i] = self.pred_err(W_tilde)
-            self.pred_err_s_X[i] = self.pred_err_X(X_tilde)
-            self.pen_log_LHs[i] = self.stand_pen_log_lh(
-                W_tilde, X_tilde, lamb, lambda_X, lambda_W
-            )
-            self.log_LHs[i] = self.stand_log_lh(W_tilde, X_tilde, lamb)
-            self.log_LH_Ws[i] = self.stand_log_lh_W(W_tilde)
-
-        self.W_tilde = self.W_s[-1, :, :]
-        self.X_tilde = self.X_s[-1, :, :]
-
-    def fisher(self, x, lamb, lambda_W, lambda_X):
-        W = x[: self.K * self.d].reshape(self.W.shape)
-        X = x[self.K * self.d :].reshape(self.Y.shape)
-        # matrix of outer products of feature vectors
-        inter = np.einsum("ij, jk-> ikj", self.X_n, self.X_n.T, order="K").reshape(
-            (self.d, self.d * self.n), order="F"
-        )
-        # matrix of squared derivatives of the activation function
-        sig_der_square = np.power(sigma(W @ self.X_n), 2)
-
-        # matrix of structural term
-        non_struct = -lamb * (X - sigma(W @ self.X_n)) * sigma_sec_der(W @ self.X_n)
-        # augment the matrix for multiplication with the outer products of feature vectors
-        factors = np.kron(sig_der_square + non_struct, np.ones((1, self.d)))
-
-        F_WW = lamb * block_diag(
-            *[
-                np.sum(
-                    (factors[i, :] * inter).reshape(
-                        (self.d, self.d, self.n), order="A"
-                    ),
-                    axis=2,
-                )
-                for i in range(self.K)
-            ]
-        ) + lambda_W * np.eye(self.K * self.d)
-        F_XX = self.var_Y(X) + (lamb + lambda_X) * np.eye(self.K * self.n)
-        v_blocks = [
-            np.hstack(
-                [np.outer(self.X_n[:, i], np.eye(self.K)[:, k]) for i in range(self.n)]
-            )
-            for k in range(self.K)
-        ]
-        X_augmented = np.vstack(v_blocks)
-        sig_der = np.kron(sigma_der(W @ self.X_n), np.ones((self.d, self.K)))
-        F_WX = sig_der * X_augmented
-        F = np.block([[F_WW, F_WX], [F_WX.T, F_XX]])
-
-        return F
-
-    def var_Y(self, X):
-        """
-        Computes the covariance matrix of n Multidimensional(1) distributed
-        random vectors whose expected values are proportional to the columns of X.
-
-        Parameters:
-        -----------
-
-        Returns:
-        --------
-        numpy.ndarray
-
-        """
-        probabilities = softmax(X, axis=0)
-        diag = np.diag(probabilities.flatten("F"))
-
-        blocks = [
-            np.outer(probabilities[:, i], probabilities[:, i]) for i in range(self.n)
-        ]
-
-        return diag - block_diag(*blocks)
