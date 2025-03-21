@@ -419,7 +419,7 @@ class Experiment:
         numpy.ndarray
             Weight matrix W of shape (K, d).
         """
-        return x[: self.K * self.d].reshape(self.W.shape)
+        return ups[: self.K * self.d].reshape(self.W.shape)
 
     def extract_X(self, ups):
         """
