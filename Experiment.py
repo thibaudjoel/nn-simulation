@@ -30,9 +30,9 @@ class Experiment:
     rng : numpy.random.Generator
         Random number generator instance for reproducibility.
     exp_Y : np.ndarray
-        Expectation of the data.
+        Expected values of the response.
     Y : np.ndarray
-        Observed data category labels.
+        Observed response.
     W : np.ndarray
         True weight matrix of shape (K, d).
     norm_constants : np.ndarray
@@ -47,14 +47,22 @@ class Experiment:
         Penalized log-likelihood values over iterations.
     logLH_Ws : np.ndarray
         Log-likelihood values for W over iterations.
-    prediction_err_s : np.ndarray
-        Prediction errors over iterations.
     iterations : int
         Number of optimization iterations performed.
-    losses : np.ndarray
-        Loss values over iterations.
+    losses : numpy.ndarray
+        Stores loss values across iterations.
+    losses_X : numpy.ndarray
+        Stores loss values specific to X across iterations.
     hist : list
-        History of optimization updates.
+        Intermediate values of full dimensional parameter over iterations.
+    W_s : numpy.ndarray
+        Intermediate values of W over iterations.
+    X_s : numpy.ndarray
+        Intermediate values of X over iterations.
+    cross_entr_s : numpy.ndarray
+        Intermediate values of cross entropies specific to W.
+    cross_entr_s_X : numpy.ndarray
+        Intermediate values of cross entropies specific to X.
 
     Methods:
     --------
@@ -77,21 +85,21 @@ class Experiment:
         Computes the standardized log-likelihood for a given weight matrix.
 
     stand_log_lh(W, X):
-        Computes the standardized log-likelihood including a structural penalty.
+        Computes the full dimensional standardized log-likelihood.
 
     stand_pen_log_lh(W, X):
-        Computes the penalized log-likelihood with additional regularization terms.
+        Computes the full dimensional standardized penalized log-likelihood .
 
     pred_err(W):
-        Computes prediction error using softmax probabilities.
+        Computes prediction error using W.
 
     pred_err_X(X):
-        Computes prediction error given the latent feature representation X.
+        Computes prediction error given the nuisance parameter X.
 
-    loss(W):
+    cross_entr(W):
         Computes the Frobenius norm difference between true and estimated W.
 
-    loss_X(X):
+    cross_entr_X(X):
         Computes the Frobenius norm difference between X and its estimated form.
 
     plot_convergence():
@@ -118,6 +126,10 @@ class Experiment:
     """
 
     def __init__(self, n, d, K, s_eta, rng, lamb, lambda_W, lambda_X):
+        """
+        Initializes the class with given parameters and preallocates necessary variables.
+
+        """
         self.rng = rng
         self.n = n
         self.d = d
@@ -133,7 +145,6 @@ class Experiment:
         self.X_n = self.sample_features()
         self.W_tilde = np.zeros_like(self.W)
         self.X_tilde = np.zeros_like(self.Y)
-        self.prediction_err_s = np.zeros(0)
         self.iterations = 0
         self.losses = np.zeros(0)
         self.losses_X = np.zeros(self.iterations)
@@ -143,8 +154,8 @@ class Experiment:
         self.pen_log_LHs = np.zeros(0)
         self.log_LHs = np.zeros(0)
         self.log_LH_Ws = np.zeros(0)
-        self.pred_err_s = np.zeros(0)
-        self.pred_err_s_X = np.zeros(0)
+        self.cross_entr_s = np.zeros(0)
+        self.cross_entr_s_X = np.zeros(0)
 
 
     def sample_norm_const(self):
@@ -361,10 +372,31 @@ class Experiment:
         return gradient_struc + gradient_ridge
 
     def callback(self, ups):
+        """
+        Stores the current optimization state and prints the current status.
+
+        Parameters:
+        -----------
+        ups : numpy.ndarray
+            The vectorized full dimensional parameter.
+
+        Returns:
+        --------
+        None
+            Updates the history (`self.hist`) and prints the current status.
+        """
         self.hist.append(ups)
         self.print_status(ups, self.lamb, self.lambda_W, self.lambda_X)
 
     def sample_W_0(self):
+        """
+        Samples an initial weight matrix W_0 with small perturbations from true W.
+
+        Returns:
+        --------
+        numpy.ndarray
+            A perturbed version of the weight matrix W, sampled from a normal distribution.
+        """
         # return self.rng.standard_normal((self.K, self.d)) / np.sqrt(self.d**2)
         return (
             self.W
@@ -373,23 +405,90 @@ class Experiment:
             * 1e1
         )
 
-    def extract_W(self, x):
+    def extract_W(self, ups):
+        """
+        Extracts and reshapes the weight matrix W from vectorized full dimensional parameter.
+
+        Parameters:
+        -----------
+        ups : numpy.ndarray
+            Vectorized full dimensional parameter.
+
+        Returns:
+        --------
+        numpy.ndarray
+            Weight matrix W of shape (K, d).
+        """
         return x[: self.K * self.d].reshape(self.W.shape)
 
-    def extract_X(self, x):
-        return x[self.K * self.d :].reshape(self.Y.shape)
+    def extract_X(self, ups):
+        """
+        Extracts and reshapes the latent variable matrix X from a flattened parameter vector.
 
-    def gradient_ups(self, vec_W_X):
-        W = self.extract_W(vec_W_X)
-        X = self.extract_X(vec_W_X)
+        Parameters:
+        -----------
+        ups : numpy.ndarray
+            Vectorized full dimensional parameter.
+
+        Returns:
+        --------
+        numpy.ndarray
+            Nuisance parameter X of shape (K, n).
+        """
+        return ups[self.K * self.d :].reshape(self.Y.shape)
+
+    def gradient_ups(self, ups):
+        """
+        Computes the gradient of the penalized log-likelihood at ups.
+
+        Parameters:
+        -----------
+        ups : numpy.ndarray
+            Vectorized full dimensional parameter.
+
+        Returns:
+        --------
+        numpy.ndarray
+            Vectorized gradient of the penalized log-likelihood at ups.
+        """
+        W = self.extract_W(ups)
+        X = self.extract_X(ups)
         return self.vectorize(
             self.gradient_W(W, X), self.gradient_X(W, X)
         )
 
     def vectorize(self, W, X):
+        """
+        Flattens and concatenates W and X into a single vector.
+
+        Parameters:
+        -----------
+        W : numpy.ndarray
+            Weight matrix of shape (K, d).
+        X : numpy.ndarray
+            Nuisance parameter of shape (K, n).
+
+        Returns:
+        --------
+        numpy.ndarray
+            Flattened full dimensional parameter.
+    """
         return np.concatenate((W.flatten(), X.flatten()))
 
     def print_status(self, ups):
+        """
+        Prints the current status of the optimization, including loss and prediction errors.
+
+        Parameters:
+        -----------
+        ups : numpy.ndarray
+            Flattened full dimensional parameter.
+
+        Returns:
+        --------
+        None
+            Outputs the current loss, prediction errors, and log-likelihood values.
+        """
         W = self.extract_W(ups)
         X = self.extract_X(ups)
         print(f"pred_err: {self.cross_entr(W)}")
@@ -400,13 +499,26 @@ class Experiment:
         print(f"-logLH_W = {-self.stand_log_lh_W(W)}")
 
     def set_value_hist(self, iterations):
+        """
+        Stores the optimization history, including loss, log-likelihood, and predictions.
+
+        Parameters:
+        -----------
+        iterations : int
+            The number of iterations performed during optimization.
+
+        Returns:
+        --------
+        None
+            Updates the history of W, X, loss values, and log-likelihoods.
+        """
         self.iterations = iterations
         self.W_s = np.zeros((self.iterations, self.K, self.d))
         self.X_s = np.zeros((self.iterations, self.K, self.n))
         self.losses = np.zeros(self.iterations)
         self.losses_X = np.zeros(self.iterations)
-        self.pred_err_s = np.zeros(self.iterations)
-        self.pred_err_s_X = np.zeros(self.iterations)
+        self.cross_entr_s = np.zeros(self.iterations)
+        self.cross_entr_s_X = np.zeros(self.iterations)
         self.pen_log_LHs = np.zeros(self.iterations)
         self.log_LHs = np.zeros(self.iterations)
         self.log_LH_Ws = np.zeros(self.iterations)
@@ -418,8 +530,8 @@ class Experiment:
             self.X_s[i, :, :] = X_tilde
             self.losses[i] = self.loss(W_tilde)
             self.losses_X[i] = self.loss_X(X_tilde)
-            self.pred_err_s[i] = self.cross_entr(W_tilde)
-            self.pred_err_s_X[i] = self.cross_entr_X(X_tilde)
+            self.cross_entr_s[i] = self.cross_entr(W_tilde)
+            self.cross_entr_s_X[i] = self.cross_entr_X(X_tilde)
             self.pen_log_LHs[i] = self.stand_pen_log_lh(W_tilde, X_tilde)
             self.log_LHs[i] = self.stand_log_lh(W_tilde, X_tilde)
             self.log_LH_Ws[i] = self.stand_log_lh_W(W_tilde)
@@ -428,6 +540,14 @@ class Experiment:
         self.X_tilde = self.X_s[-1, :, :]
 
     def maximize_newton(self, max_it=1000, eps=1e-3):
+        """
+        Maximizes the penalized log-likelihood function using the Newton-CG optimization method.
+
+        Returns:
+        --------
+        None
+            The function updates internal attributes.
+        """
         W_0 = self.sample_W_0()
         X_0 = sigma(W_0 @ self.X_n)
         ups_0 = self.vectorize(W_0, X_0)
@@ -448,6 +568,18 @@ class Experiment:
         self.set_value_hist(res.nit)
 
     def maximize_cg(self, max_it=10000, gtol=1e-3):
+        """
+        Performs constrained maximization of the penalized log-likelihood function 
+        using the Conjugate Gradient (CG) optimization method.
+
+        Parameters:
+        -----------
+        max_it : int, optional (default=10000)
+            The maximum number of iterations for the CG optimization.
+        gtol : float, optional (default=1e-3)
+            The gradient norm tolerance for stopping criteria.
+
+        """
 
         W_0 = self.sample_W_0()
         X_0 = sigma(W_0 @ self.X_n)
@@ -473,22 +605,22 @@ class Experiment:
 
         self.set_value_hist(res.nit)
 
-    def fisher(self, x):
+    def fisher(self, ups):
         """
-        Computes the Fisher Information Matrix (FIM) for a model with parameters W and X.
+        Computes the Fisher Information Matrix (FIM) for the model @ ups = vec(W, X)
 
         Parameters:
         -----------
-        x : numpy.ndarray
-            Flattened vector containing both W and X.
+        ups : numpy.ndarray
+            The full dimensional parameter as a flattened vector.
 
         Returns:
         --------
         numpy.ndarray
             The Fisher Information Matrix.
         """
-        W = x[: self.K * self.d].reshape(self.W.shape)
-        X = x[self.K * self.d :].reshape(self.Y.shape)
+        W = self.extract_W(ups)
+        X = self.extract_X(ups)
         # matrix of outer products of feature vectors
         inter = np.einsum("ij, jk-> ikj", self.X_n, self.X_n.T, order="K").reshape(
             (self.d, self.d * self.n), order="F"
