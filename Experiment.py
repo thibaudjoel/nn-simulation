@@ -1,3 +1,4 @@
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import logsumexp, softmax
@@ -186,8 +187,7 @@ class Experiment:
         categories = self.rng.integers(0, self.K, self.n)
 
         # sample probability vectors
-        probabilities = self.rng.dirichlet(np.ones(self.K), size=self.n).T + 1 / self.K
-        # probabilities = self.rng.dirichlet(1e2 * self.K * np.ones(self.K), size=self.n).T
+        probabilities = self.rng.dirichlet(1e2 * np.ones(self.K), size=self.n).T
 
         # Set probabilities of high probability classes to 0 and rescale s.t. sum of other probabilities is 1 - s_eta
         probabilities[categories, np.arange(self.n)] = 0
@@ -292,7 +292,7 @@ class Experiment:
         """
 
         return (
-            self.stand_log_lh(W, X, self.lamb)
+            self.stand_log_lh(W, X)
             - self.lambda_X / 2 * np.linalg.norm(X, "fro") ** 2 / self.n
             - self.lambda_W / 2 * np.linalg.norm(W, "fro") ** 2 / self.n
         )
@@ -386,7 +386,7 @@ class Experiment:
             Updates the history (`self.hist`) and prints the current status.
         """
         self.hist.append(ups)
-        self.print_status(ups, self.lamb, self.lambda_W, self.lambda_X)
+        self.print_status(ups)
 
     def sample_W_0(self):
         """
@@ -684,36 +684,32 @@ class Experiment:
 
         return diag - block_diag(*blocks)
     
-    def plot_convergence(self):
-        log_lh_optimum = self.stand_log_lh(self.W, sigma(self.W @ self.X_n))
-        print(log_lh_optimum)
-
-        plt.figure(figsize=(4, 3), dpi=300)
-
-        plt.plot(
-            self.pen_logLHs,
-            label=r"$\frac{1}{n}\mathcal{L}_{\mathcal{G}}(W_i, \mathbb{X}_i)$",
-            linewidth=0.5,
-            alpha=0.8,
-            color="navy",
-        )
-        # plt.plot(self.logLH_Ws, label=r"$\frac{1}{n}\mathbb{E}\mathcal{L}(W_i)$",
-        #         linewidth=.5, alpha=0.8, color='darkred')
-
-        # Optimal log-likelihood reference line
-        # plt.hlines(log_lh_optimum, 0, self.iterations, color='skyblue',
-        #         linestyle='dashed', linewidth=1, label=r"$\frac{1}{n}\mathcal{L}(W^*, \mathbb{X}^*)$")
-
-        # plt.title("Convergence of Log-Likelihood", fontsize=12, fontweight='bold')
-
-        plt.xlabel(r"$i$", fontsize=12)
-        plt.grid(True, linestyle="--", alpha=0.6)
-        plt.legend(fontsize=12, loc="best", frameon=True)
-
-        # Tight layout for better appearance
-        plt.tight_layout()
-
-        # Show plot
-        plt.show()
-        # plt.savefig(f"imgs/convergence_{self.n}_{self.lamb}_{self.lambda_W}_{self.lambda_X}_{self.d}_{self.K}_{self.max_it}_{self.eps_W}_{self.eps_X}_{self.gamma}.png")
-        # plt.close()
+    def save_results_as_dic(self, folder=""):
+        result_dic = {
+            "n": self.n,
+            "d": self.d,
+            "K": self.K,
+            "s_eta": self.s_eta,
+            "lamb": self.lamb,
+            "lambda_W": self.lambda_W,
+            "lambda_X": self.lambda_X,
+            "exp_Y": self.exp_Y.tolist(),  
+            "Y": self.Y.tolist(),  
+            "W": self.W.tolist(),
+            "X_n": self.X_n.tolist(),
+            "W_tilde": self.W_tilde.tolist(),
+            "X_tilde": self.X_tilde.tolist(),
+            "iterations": self.iterations,
+            "losses": self.losses.tolist(),
+            "losses_X": self.losses_X.tolist(),
+            "pen_log_LHs": self.pen_log_LHs.tolist(),
+            "log_LHs": self.log_LHs.tolist(),
+            "log_LH_Ws": self.log_LH_Ws.tolist(),
+            "cross_entr_s": self.cross_entr_s.tolist(),
+            "cross_entr_s_X": self.cross_entr_s_X.tolist()
+        }
+        name = f"n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        if folder:
+            name = folder + "/" + name
+        with open(name, "w") as json_file:
+            json.dump(result_dic, json_file, indent=4)
