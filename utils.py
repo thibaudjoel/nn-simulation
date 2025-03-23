@@ -1,6 +1,5 @@
 import numpy as np
 from pathlib import Path
-from scipy.special import softmax
 from scipy.linalg import block_diag
 
 
@@ -236,51 +235,30 @@ def eff_rad(D, Var_ups, F_inv, n):
     )
 
 
-# def eff_dim():
-#     return
-
-# def tau_3(alpha):
-#     """
-#     Computes the tau_3 value based on two terms: one involving `alpha` and the other involving
-#     the noise level of the model's predictions. The final value returned is the maximum of these two terms.
-
-#     Parameters:
-#     -----------
-#     alpha : float
-#         A parameter that scales the first term of the computation. This should be a scalar.
-
-#     W : numpy.ndarray
-#         The weight matrix of the model. Shape: (K, d), where K is the number of categories and d is the number of input features.
-
-#     X_n : numpy.ndarray
-#         The input matrix. Shape: (d, N), where d is the number of features and N is the number of samples.
-
-#     Returns:
-#     --------
-#     float
-#         The tau_3 value, which is the maximum of two computed terms: one depending on `alpha`
-#         and the other on the model's noise level.
-#     """
-#     one = np.sqrt(2) * np.exp(1) * alpha * np.max()
-#     two = 2**(3/2) * np.exp(2) * noise_level(W, X_n) * (1 - noise_level(W, X_n))**(3/2)
-#     return np.max([one, two])
-
-
-def create_img_folders():
+def create_folders():
     """
-    Creates a main directory named 'imgs' in the current working directory
-    and three subdirectories: 'good_initialization', 'bad_initialization',
-    and 'monte_carlo'. If the directories already exist, no changes are made.
+    Creates two main directories: 'data' and 'imgs' in the current working directory.
+    Each main directory will contain two subdirectories: 'mc' and 'conv'.
+    Inside each 'mc' and 'conv' folder, three additional subdirectories
+    ('low_dim', 'med_dim', 'high_dim') will be created.
 
+    If the directories already exist, no changes are made.
     """
     current_folder = Path.cwd()
-    main = current_folder / "imgs"
-    subfolders = ["good_initialization", "bad_initialization", "monte_carlo"]
+    main_folders = ["data", "imgs"]
+    subfolders_1 = ["mc", "conv"]
+    subfolders_2 = ["low_dim", "med_dim", "high_dim"]
 
-    # Create main folder
-    main.mkdir(exist_ok=True)
+    for main in main_folders:
+        main_path = current_folder / main
+        main_path.mkdir(exist_ok=True)
 
-    # Create subfolders
-    for sub in subfolders:
-        subfolder_path = main / sub
-        subfolder_path.mkdir(exist_ok=True)
+        for sub_1 in subfolders_1:
+            subfolder_path_1 = main_path / sub_1
+            subfolder_path_1.mkdir(exist_ok=True)
+
+            for sub_2 in subfolders_2:
+                subfolder_path_2 = subfolder_path_1 / sub_2
+                subfolder_path_2.mkdir(exist_ok=True)
+
+    print("Folders created successfully.")
