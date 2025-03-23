@@ -492,7 +492,7 @@ class MonteCarlo:
         ) + self.lambda_W * np.eye(self.K * self.d)
         F_XX = self.var_Y(X) + (self.lamb + self.lambda_X) * np.eye(self.K * self.n)
         v_blocks = [
-            np.hstack([np.outer(self.X_n, np.eye(self.K)[:, k]) for i in range(self.n)])
+            np.hstack([np.outer(self.X_n[:, i], np.eye(self.K)[:, k]) for i in range(self.n)])
             for k in range(self.K)
         ]
         X_augmented = np.vstack(v_blocks)
