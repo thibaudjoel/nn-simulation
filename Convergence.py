@@ -157,7 +157,6 @@ class Convergence:
         self.cross_entr_s = np.zeros(0)
         self.cross_entr_s_X = np.zeros(0)
 
-
     def sample_norm_const(self):
         """
         Samples the normalization constant `C` from a uniform distribution.
@@ -168,20 +167,18 @@ class Convergence:
             The sampled normalization constant `C`.
         """
 
-        return self.rng.uniform(
-            np.log(self.K), np.log(1e1 * self.K), size=(1, self.n)
-        )
+        return self.rng.uniform(np.log(self.K), np.log(1e1 * self.K), size=(1, self.n))
 
     def sample_exp_Y(self):
         """
-        Samples category probabilities from a Dirichlet distribution and adjusts them so that 
-        one randomly chosen category in each sample receives a higher probability (`s_eta`), 
+        Samples category probabilities from a Dirichlet distribution and adjusts them so that
+        one randomly chosen category in each sample receives a higher probability (`s_eta`),
         while the remaining categories sum to `1 - s_eta`.
 
         Returns:
         --------
         np.ndarray
-            A 2D array of shape (self.K, self.n), where each column contains 
+            A 2D array of shape (self.K, self.n), where each column contains
             the adjusted probability distributions over `K` categories.
         """
         # sample classes with high probability
@@ -216,7 +213,7 @@ class Convergence:
     def sample_features(self):
         """
         Computes the feature matrix X_n.
-        
+
         Returns:
         --------
         np.ndarray: The feature matrix X_n.
@@ -398,7 +395,7 @@ class Convergence:
         numpy.ndarray
             A perturbed version of the weight matrix W, sampled from a normal distribution.
         """
-        # return self.rng.standard_normal((self.K, self.d)) / np.sqrt(self.d**2)
+
         return (
             self.W
             + self.rng.standard_normal((self.K, self.d))
@@ -454,9 +451,7 @@ class Convergence:
         """
         W = self.extract_W(ups)
         X = self.extract_X(ups)
-        return self.vectorize(
-            self.gradient_W(W, X), self.gradient_X(W, X)
-        )
+        return self.vectorize(self.gradient_W(W, X), self.gradient_X(W, X))
 
     def vectorize(self, W, X):
         """
@@ -473,7 +468,7 @@ class Convergence:
         --------
         numpy.ndarray
             Flattened full dimensional parameter.
-    """
+        """
         return np.concatenate((W.flatten(), X.flatten()))
 
     def print_status(self, ups):
@@ -556,7 +551,8 @@ class Convergence:
 
         res = minimize(
             fun=lambda ups: -self.stand_pen_log_lh(
-                self.extract_W(ups), self.extract_X(ups)),
+                self.extract_W(ups), self.extract_X(ups)
+            ),
             x0=ups_0,
             method="Newton-CG",
             jac=lambda ups: -self.gradient_ups(ups),
@@ -570,7 +566,7 @@ class Convergence:
 
     def maximize_cg(self, max_it=10000, gtol=1e-3):
         """
-        Performs constrained maximization of the penalized log-likelihood function 
+        Performs constrained maximization of the penalized log-likelihood function
         using the Conjugate Gradient (CG) optimization method.
 
         Parameters:
@@ -630,7 +626,9 @@ class Convergence:
         sig_der_square = np.power(sigma(W @ self.X_n), 2)
 
         # matrix of structural term
-        non_struct = -self.lamb * (X - sigma(W @ self.X_n)) * sigma_sec_der(W @ self.X_n)
+        non_struct = (
+            -self.lamb * (X - sigma(W @ self.X_n)) * sigma_sec_der(W @ self.X_n)
+        )
         # augment the matrix for multiplication with the outer products of feature vectors
         factors = np.kron(sig_der_square + non_struct, np.ones((1, self.d)))
 
@@ -661,14 +659,14 @@ class Convergence:
 
     def var_Y(self, X):
         """
-        Computes the covariance matrix of n multidimensional distributed 
+        Computes the covariance matrix of n multidimensional distributed
         random vectors whose expected values are proportional to the exponential
         of the columns of X.
 
         Parameters:
         -----------
         X : numpy.ndarray, shape (K, n)
-            A matrix where each column represents a probability distribution 
+            A matrix where each column represents a probability distribution
             (before applying softmax).
 
         Returns:
@@ -684,7 +682,7 @@ class Convergence:
         ]
 
         return diag - block_diag(*blocks)
-    
+
     def save_results_as_dic(self, folder=""):
         result_dic = {
             "n": self.n,
@@ -694,8 +692,8 @@ class Convergence:
             "lamb": self.lamb,
             "lambda_W": self.lambda_W,
             "lambda_X": self.lambda_X,
-            "exp_Y": self.exp_Y.tolist(),  
-            "Y": self.Y.tolist(),  
+            "exp_Y": self.exp_Y.tolist(),
+            "Y": self.Y.tolist(),
             "W": self.W.tolist(),
             "X_n": self.X_n.tolist(),
             "W_tilde": self.W_tilde.tolist(),
@@ -707,7 +705,7 @@ class Convergence:
             "log_LHs": self.log_LHs.tolist(),
             "log_LH_Ws": self.log_LH_Ws.tolist(),
             "cross_entr_s": self.cross_entr_s.tolist(),
-            "cross_entr_s_X": self.cross_entr_s_X.tolist()
+            "cross_entr_s_X": self.cross_entr_s_X.tolist(),
         }
         name = f"data/conv/{folder + '/' if folder else ""}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
