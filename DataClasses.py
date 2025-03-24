@@ -45,64 +45,6 @@ class ConvergenceData:
     def filname_from_attrs(self):
         return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
-    def create_plot(self, save_path=None):
-        plt.rcParams.update(
-            {
-                "text.usetex": True,
-                "font.family": "mathpazo",
-                "axes.titlesize": 14,
-                "axes.labelsize": 12,
-                "legend.fontsize": 12,
-                "xtick.labelsize": 10,
-                "ytick.labelsize": 10,
-                "text.latex.preamble": r"\usepackage{amsfonts, bm}",
-            }
-        )
-
-        fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-        viridis = plt.cm.get_cmap("viridis", 3)
-        color1, color2, color3 = viridis(0), viridis(0.5), viridis(1)
-
-        # Log Likelihoods
-        axes[0].plot(
-            self.pen_log_LHs,
-            label=r"$\frac{1}{n} \mathcal{L}_\mathcal{G}(\bm{\upsilon}_i)$",
-            color=color1,
-            linewidth=1.5,
-        )
-        axes[0].plot(
-            self.log_LHs,
-            label=r"$\frac{1}{n} \mathcal{L}(\bm{\upsilon}_i)$",
-            linestyle="--",
-            color=color2,
-            linewidth=1.5,
-        )
-        axes[0].set_xlabel(r"$i$")
-        axes[0].legend(frameon=False)
-        axes[0].grid(True, linestyle=":", linewidth=0.7)
-        axes[0].set_title("(penalized) log-likelihood")
-
-        # Losses
-        axes[1].plot(self.losses, label=r"$\|W_i-W^*\|_F$", color=color3, linewidth=1.5)
-        axes[1].set_xlabel(r"$i$")
-        axes[1].legend(frameon=False)
-        axes[1].grid(True, linestyle=":", linewidth=0.7)
-        axes[1].set_title("Loss")
-
-        fig.suptitle(
-            f"Model performance for $\\lambda={self.lamb}$, $\\lambda_W={self.lambda_W}$, $\\lambda_{{\\mathbb{{X}}}}={self.lambda_X}$, $s(\\bm{{\\eta}})={self.s_eta}$, factor: {self.W_0_factor}",
-            fontsize=16,
-            y=1.05,
-        )
-
-        plt.tight_layout()
-
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
-
-        plt.show()
-
-
 class ConvergenceDataMultiple:
     def __init__(
         self,
@@ -166,7 +108,7 @@ class ConvergenceDataMultiple:
             "W_0": r"$\gamma$",
         }[compare]
 
-    def create_plots(self, save_path=None):
+    def create_plots(self, save_folder=""):
         plt.rcParams.update(
             {
                 "text.usetex": True,
@@ -221,9 +163,10 @@ class ConvergenceDataMultiple:
         axes[2].set_ylabel(r"$\|W_i-W^*\|$")
         axes[2].legend(frameon=False)
         axes[2].grid(True, linestyle=":", linewidth=0.7)
-        axes[2].set_title("Loss")
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        axes[2].set_title("loss")
+        if save_folder:
+            path = f"/imgs/conv/{save_folder}/n_{self.n_s}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor_s}_s_eta_{self.s_eta_s}_la_{self.lamb_s}_laW_{self.lambda_W_s}_lax_{self.lambda_X_s}.pdf"
+            plt.savefig(path, dpi=300, bbox_inches="tight")
 
         plt.tight_layout()
         plt.show()
@@ -314,7 +257,7 @@ class MonteCarloData:
             "lambda_X": r"$\lambda_{{\mathbb{X}}}$",
         }[compare]
 
-    def create_plots(self):
+    def create_plots(self, save_folder=""):
         plt.rcParams.update(
             {
                 "text.usetex": True,
@@ -350,4 +293,7 @@ class MonteCarloData:
 
         plt.grid(True, linestyle="-", linewidth=0.5, alpha=0.7)
         plt.tight_layout()
+        if save_folder:
+            path = f"/imgs/mc/{save_folder}/n_{self.n_s}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta_s}_la_{self.lamb_s}_laW_{self.lambda_W_s}_lax_{self.lambda_X_s}.pdf"
+            plt.savefig(path, dpi=300, bbox_inches="tight")
         plt.show()
