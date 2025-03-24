@@ -218,7 +218,7 @@ class ConvergenceDataMultiple:
         axes[1].grid(True, linestyle=":", linewidth=0.7)
         axes[1].set_title("log-likelihoods")
         axes[2].set_xlabel(r"$i$")
-        axes[2].set_ylabel(r"\|W_i-W^*\|")
+        axes[2].set_ylabel(r"$\|W_i-W^*\|$")
         axes[2].legend(frameon=False)
         axes[2].grid(True, linestyle=":", linewidth=0.7)
         axes[2].set_title("Loss")
