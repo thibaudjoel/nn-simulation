@@ -707,7 +707,9 @@ class Convergence:
             "cross_entr_s": self.cross_entr_s.tolist(),
             "cross_entr_s_X": self.cross_entr_s_X.tolist(),
         }
-        name = f"data/conv/{folder + '/' if folder else ""}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        if folder:
+            folder+= '/'
+        name = f"data/conv/{folder}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
