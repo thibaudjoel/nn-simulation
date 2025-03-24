@@ -117,6 +117,12 @@ def sigma_der(x, alpha=1):
     res[negative] = _negative_sigma_der(x[negative], alpha)
     return res
 
+def positive_sigma_sec_der(x, alpha=1):
+    return alpha * sigma_der(x, alpha) * np.exp(-alpha * x) / (1 + np.exp(-alpha * x))
+
+def negative_sigma_sec_der(x, alpha=1):
+    return alpha * sigma_der(x, alpha) / (1 + np.exp(alpha * x))
+
 
 def sigma_sec_der(x, alpha=1):
     """
@@ -132,7 +138,13 @@ def sigma_sec_der(x, alpha=1):
     ndarray
         The second derivative of sigma at each x.
     """
-    return alpha * sigma_der(x, alpha) / (1 + np.exp(alpha * x))
+    positive = x >= 0
+    negative = ~positive
+
+    res = np.empty_like(x, dtype=float)
+    res[positive] = positive_sigma_sec_der(x[positive], alpha)
+    res[negative] = negative_sigma_sec_der(x[negative], alpha)
+    return res
 
 
 def sigma_inv_pos(x, alpha=1):
