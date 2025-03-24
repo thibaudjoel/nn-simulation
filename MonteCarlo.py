@@ -548,14 +548,17 @@ class MonteCarlo:
             "X_n": self.X_n.tolist(),
             "W_tilde_s": self.W_tilde_s.tolist(),
             "X_tilde_s": self.X_tilde_s.tolist(),
-            "iterations": self.iterations,
+            "iterations": self.iterations.tolist(),
             "losses": self.losses.tolist(),
             "pen_log_LHs": self.pen_log_LHs.tolist(),
             "log_LHs": self.log_LHs.tolist(),
             "log_LH_Ws": self.log_LH_Ws.tolist(),
             "cross_entr_s": self.cross_entr_s.tolist(),
         }
-        name = f"data/mc/{folder + '/' if folder else ""}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        if folder:
+            folder += '/'
+        name = f"data/mc/{folder}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        # name = f"data/mc/{folder + '/' if folder else ""}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
 
