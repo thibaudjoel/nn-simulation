@@ -188,7 +188,7 @@ class ConvergenceDataMultiple:
             # penalized Likelihoods
             axes[0].plot(
                 conv_result.pen_log_LHs,
-                label=self.legend_label + "$=$" + self.legend_values[i],
+                label=self.legend_label + "$=$" + str(self.legend_values[i]),
                 color=colors[i],
                 linewidth=1.5,
             )
