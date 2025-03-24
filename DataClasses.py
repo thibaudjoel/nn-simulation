@@ -61,7 +61,7 @@ class ConvergenceData:
 
         fig, axes = plt.subplots(1, 2, figsize=(10, 5))
         viridis = plt.cm.get_cmap("viridis", 3)
-        color1, color2, color3 = viridis(0), viridis(0.5), viridis(1) 
+        color1, color2, color3 = viridis(0), viridis(0.5), viridis(1)
 
         # Log Likelihoods
         axes[0].plot(
@@ -83,9 +83,7 @@ class ConvergenceData:
         axes[0].set_title("(penalized) log-likelihood")
 
         # Losses
-        axes[1].plot(
-            self.losses, label=r"$\|W_i-W^*\|_F$", color=color3, linewidth=1.5
-        )
+        axes[1].plot(self.losses, label=r"$\|W_i-W^*\|_F$", color=color3, linewidth=1.5)
         axes[1].set_xlabel(r"$i$")
         axes[1].legend(frameon=False)
         axes[1].grid(True, linestyle=":", linewidth=0.7)
@@ -103,10 +101,21 @@ class ConvergenceData:
             plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
         plt.show()
-        
+
+
 class ConvergenceDataMultiple:
     def __init__(
-        self, folder, n_s, d, K, s_eta_s, lamb_s, lambda_W_s, lambda_X_s, W_0_factor_s, compare="lambda"
+        self,
+        folder,
+        n_s,
+        d,
+        K,
+        s_eta_s,
+        lamb_s,
+        lambda_W_s,
+        lambda_X_s,
+        W_0_factor_s,
+        compare="lambda",
     ):
         self.folder = folder
         self.n_s = n_s
@@ -119,11 +128,24 @@ class ConvergenceDataMultiple:
         self.W_0_factor_s = W_0_factor_s
         self.conv_results = []
         for n, s_eta, lamb, lambda_W, lambda_X, W_0_factor in product(
-            self.n_s, self.s_eta_s, self.lamb_s, self.lambda_W_s, self.lambda_X_s, self.W_0_factor_s
+            self.n_s,
+            self.s_eta_s,
+            self.lamb_s,
+            self.lambda_W_s,
+            self.lambda_X_s,
+            self.W_0_factor_s,
         ):
             self.conv_results.append(
                 ConvergenceData(
-                    self.folder, n, self.d, self.K, s_eta, lamb, lambda_W, lambda_X, W_0_factor
+                    self.folder,
+                    n,
+                    self.d,
+                    self.K,
+                    s_eta,
+                    lamb,
+                    lambda_W,
+                    lambda_X,
+                    W_0_factor,
                 )
             )
 
@@ -133,7 +155,7 @@ class ConvergenceDataMultiple:
             "lambda": self.lamb_s,
             "lambda_W": self.lambda_W_s,
             "lambda_X": self.lambda_X_s,
-            "W_0": self.W_0_factor_s
+            "W_0": self.W_0_factor_s,
         }[compare]
         self.legend_label = {
             "n": r"$n",
@@ -141,8 +163,9 @@ class ConvergenceDataMultiple:
             "lambda": r"$\lambda$",
             "lambda_W": r"$\lambda_W$",
             "lambda_X": r"$\lambda_{{\mathbb{X}}}$",
-            "W_0": r"$\gamma$"
+            "W_0": r"$\gamma$",
         }[compare]
+
     def create_plots(self, save_path=None):
         plt.rcParams.update(
             {
@@ -178,9 +201,12 @@ class ConvergenceDataMultiple:
 
             # Losses
             axes[2].plot(
-                conv_result.losses, label=r"$\|W_i-W^*\|_F$", color=colors[i], linewidth=1.5, label=self.legend_label + "$=$" + self.legend_values[i],
+                conv_result.losses,
+                color=colors[i],
+                linewidth=1.5,
+                label=self.legend_label + "$=$" + self.legend_values[i],
             )
-            
+
         axes[0].set_xlabel(r"$i$")
         axes[0].set_ylabel(r"$\frac{1}{n} \mathcal{L}_\mathcal{G}(\bm{\upsilon}_i)$")
         axes[0].legend(frameon=False)
@@ -244,7 +270,16 @@ class MonteCarloDataSingle:
 
 class MonteCarloData:
     def __init__(
-        self, folder, n_s, d, K, s_eta_s, lamb_s, lambda_W_s, lambda_X_s, compare="lambda"
+        self,
+        folder,
+        n_s,
+        d,
+        K,
+        s_eta_s,
+        lamb_s,
+        lambda_W_s,
+        lambda_X_s,
+        compare="lambda",
     ):
         self.folder = folder
         self.n_s = n_s
