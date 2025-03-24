@@ -194,7 +194,7 @@ class ConvergenceDataMultiple:
             )
             axes[1].plot(
                 conv_result.log_LHs,
-                label=self.legend_label + "$=$" + self.legend_values[i],
+                label=self.legend_label + "$=$" + str(self.legend_values[i]),
                 color=colors[i],
                 linewidth=1.5,
             )
@@ -204,7 +204,7 @@ class ConvergenceDataMultiple:
                 conv_result.losses,
                 color=colors[i],
                 linewidth=1.5,
-                label=self.legend_label + "$=$" + self.legend_values[i],
+                label=self.legend_label + "$=$" + str(self.legend_values[i]),
             )
 
         axes[0].set_xlabel(r"$i$")
