@@ -1,12 +1,14 @@
-import numpy as np
+import multiprocessing
 import json
-from utils import sigma_inv, sigma, sigma_der, sigma_sec_der
+import numpy as np
+
 from tqdm import tqdm
 from joblib import Parallel, delayed
-import multiprocessing
 from scipy.special import logsumexp, softmax
 from scipy.optimize import minimize
 from scipy.linalg import block_diag
+
+from utils import sigma_inv, sigma, sigma_der, sigma_sec_der
 
 
 class MonteCarlo:
@@ -492,7 +494,9 @@ class MonteCarlo:
         ) + self.lambda_W * np.eye(self.K * self.d)
         F_XX = self.var_Y(X) + (self.lamb + self.lambda_X) * np.eye(self.K * self.n)
         v_blocks = [
-            np.hstack([np.outer(self.X_n[:, i], np.eye(self.K)[:, k]) for i in range(self.n)])
+            np.hstack(
+                [np.outer(self.X_n[:, i], np.eye(self.K)[:, k]) for i in range(self.n)]
+            )
             for k in range(self.K)
         ]
         X_augmented = np.vstack(v_blocks)
