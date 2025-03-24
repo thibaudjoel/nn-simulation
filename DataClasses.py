@@ -45,7 +45,7 @@ class ConvergenceData:
     def filname_from_attrs(self):
         return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
-    def create_plot(self, save_path=None, dpi=300):
+    def create_plot(self, save_path=None):
         plt.rcParams.update(
             {
                 "text.usetex": True,
@@ -100,8 +100,106 @@ class ConvergenceData:
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=dpi, bbox_inches="tight")
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
+        plt.show()
+        
+class ConvergenceDataMultiple:
+    def __init__(
+        self, folder, n_s, d, K, s_eta_s, lamb_s, lambda_W_s, lambda_X_s, W_0_factor_s, compare="lambda"
+    ):
+        self.folder = folder
+        self.n_s = n_s
+        self.d = d
+        self.K = K
+        self.s_eta_s = s_eta_s
+        self.lamb_s = lamb_s
+        self.lambda_W_s = lambda_W_s
+        self.lambda_X_s = lambda_X_s
+        self.W_0_factor_s = W_0_factor_s
+        self.conv_results = []
+        for n, s_eta, lamb, lambda_W, lambda_X, W_0_factor in product(
+            self.n_s, self.s_eta_s, self.lamb_s, self.lambda_W_s, self.lambda_X_s, self.W_0_factor_s
+        ):
+            self.conv_results.append(
+                ConvergenceData(
+                    self.folder, n, self.d, self.K, s_eta, lamb, lambda_W, lambda_X, W_0_factor
+                )
+            )
+
+        self.legend_values = {
+            "n": self.n_s,
+            "s_eta": self.s_eta_s,
+            "lambda": self.lamb_s,
+            "lambda_W": self.lambda_W_s,
+            "lambda_X": self.lambda_X_s,
+            "W_0": self.W_0_factor_s
+        }[compare]
+        self.legend_label = {
+            "n": r"$n",
+            "s_eta": r"$s(\eta)$",
+            "lambda": r"$\lambda$",
+            "lambda_W": r"$\lambda_W$",
+            "lambda_X": r"$\lambda_{{\mathbb{X}}}$",
+            "W_0": r"$\gamma$"
+        }[compare]
+    def create_plots(self, save_path=None):
+        plt.rcParams.update(
+            {
+                "text.usetex": True,
+                "font.family": "mathpazo",
+                "axes.titlesize": 14,
+                "axes.labelsize": 12,
+                "legend.fontsize": 12,
+                "xtick.labelsize": 10,
+                "ytick.labelsize": 10,
+                "text.latex.preamble": r"\usepackage{amsfonts, bm}",
+            }
+        )
+
+        colors = plt.cm.viridis(np.linspace(0, 1, len(self.conv_results)))
+
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+        for i, conv_result in enumerate(self.conv_results):
+            # penalized Likelihoods
+            axes[0].plot(
+                conv_result.pen_log_LHs,
+                label=self.legend_label + "$=$" + self.legend_values[i],
+                color=colors[i],
+                linewidth=1.5,
+            )
+            axes[1].plot(
+                conv_result.log_LHs,
+                label=self.legend_label + "$=$" + self.legend_values[i],
+                color=colors[i],
+                linewidth=1.5,
+            )
+
+            # Losses
+            axes[2].plot(
+                conv_result.losses, label=r"$\|W_i-W^*\|_F$", color=colors[i], linewidth=1.5, label=self.legend_label + "$=$" + self.legend_values[i],
+            )
+            
+        axes[0].set_xlabel(r"$i$")
+        axes[0].set_ylabel(r"$\frac{1}{n} \mathcal{L}_\mathcal{G}(\bm{\upsilon}_i)$")
+        axes[0].legend(frameon=False)
+        axes[0].grid(True, linestyle=":", linewidth=0.7)
+        axes[0].set_title("penalized log-likelihoods")
+        axes[1].set_xlabel(r"$i$")
+        axes[1].set_ylabel(r"$\frac{1}{n} \mathcal{L}(\bm{\upsilon}_i)$")
+        axes[1].legend(frameon=False)
+        axes[1].grid(True, linestyle=":", linewidth=0.7)
+        axes[1].set_title("log-likelihoods")
+        axes[2].set_xlabel(r"$i$")
+        axes[2].set_ylabel(r"\|W_i-W^*\|")
+        axes[2].legend(frameon=False)
+        axes[2].grid(True, linestyle=":", linewidth=0.7)
+        axes[2].set_title("Loss")
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+        plt.tight_layout()
         plt.show()
 
 
@@ -141,7 +239,7 @@ class MonteCarloDataSingle:
         self.from_dict(data)
 
     def filename_from_attrs(self):
-        return f"data/mc/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        return f"data/mc/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
 
 class MonteCarloData:
