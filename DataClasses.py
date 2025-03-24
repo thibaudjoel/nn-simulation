@@ -5,7 +5,7 @@ from itertools import product
 
 
 class ConvergenceData:
-    def __init__(self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X):
+    def __init__(self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X, W_0_factor):
         self.folder = folder
         self.n = n
         self.d = d
@@ -14,6 +14,7 @@ class ConvergenceData:
         self.lamb = lamb
         self.lambda_W = lambda_W
         self.lambda_X = lambda_X
+        self.W_0_factor = W_0_factor
         self.filename = self.filname_from_attrs()
         self.load_from_json(filename=self.filename)
 
@@ -42,7 +43,7 @@ class ConvergenceData:
         self.from_dict(data)
 
     def filname_from_attrs(self):
-        return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
     def create_plot(self, save_path=None, dpi=300):
         plt.rcParams.update(
@@ -91,7 +92,7 @@ class ConvergenceData:
         axes[1].set_title("Loss")
 
         fig.suptitle(
-            f"Model performance for $\\lambda={self.lamb}$, $\\lambda_W={self.lambda_W}$, $\\lambda_{{\\mathbb{{X}}}}={self.lambda_X}$, $s(\\bm{{\\eta}})={self.s_eta}$",
+            f"Model performance for $\\lambda={self.lamb}$, $\\lambda_W={self.lambda_W}$, $\\lambda_{{\\mathbb{{X}}}}={self.lambda_X}$, $s(\\bm{{\\eta}})={self.s_eta}$, factor: {self.W_0_factor}",
             fontsize=16,
             y=1.05,
         )

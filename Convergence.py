@@ -125,7 +125,7 @@ class Convergence:
 
     """
 
-    def __init__(self, n, d, K, s_eta, rng, lamb, lambda_W, lambda_X):
+    def __init__(self, n, d, K, s_eta, rng, lamb, lambda_W, lambda_X, W_0_factor=1):
         """
         Initializes the class with given parameters and preallocates necessary variables.
 
@@ -138,6 +138,7 @@ class Convergence:
         self.lamb = lamb
         self.lambda_W = lambda_W
         self.lambda_X = lambda_X
+        self.W_0_factor = W_0_factor
         self.exp_Y = self.sample_exp_Y()
         self.Y = self.sample_Y()
         self.W = self.sample_W()
@@ -400,7 +401,7 @@ class Convergence:
             self.W
             + self.rng.standard_normal((self.K, self.d))
             / np.sqrt(self.d * self.K)
-            * 1e1
+            * 1e1 * self.W_0_factor
         )
 
     def extract_W(self, ups):
@@ -709,7 +710,7 @@ class Convergence:
         }
         if folder:
             folder+= '/'
-        name = f"data/conv/{folder}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        name = f"data/conv/{folder}n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
