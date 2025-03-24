@@ -44,7 +44,7 @@ class ConvergenceData:
     def filname_from_attrs(self):
         return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
-    def plot(self, save_path=None, dpi=300):
+    def create_plot(self, save_path=None, dpi=300):
         plt.rcParams.update(
             {
                 "text.usetex": True,
@@ -59,21 +59,21 @@ class ConvergenceData:
         )
 
         fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-
-        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]
+        viridis = plt.cm.get_cmap("viridis", 3)
+        color1, color2, color3 = viridis(0), viridis(0.5), viridis(1) 
 
         # Log Likelihoods
         axes[0].plot(
             self.pen_log_LHs,
             label=r"$\frac{1}{n} \mathcal{L}_\mathcal{G}(\bm{\upsilon}_i)$",
-            color=colors[0],
+            color=color1,
             linewidth=1.5,
         )
         axes[0].plot(
             self.log_LHs,
             label=r"$\frac{1}{n} \mathcal{L}(\bm{\upsilon}_i)$",
-            color=colors[1],
             linestyle="--",
+            color=color2,
             linewidth=1.5,
         )
         axes[0].set_xlabel(r"$i$")
@@ -83,19 +83,12 @@ class ConvergenceData:
 
         # Losses
         axes[1].plot(
-            self.losses, label=r"$\|W_i-W^*\|_F$", color=colors[2], linewidth=1.5
+            self.losses, label=r"$\|W_i-W^*\|_F$", color=color3, linewidth=1.5
         )
         axes[1].set_xlabel(r"$i$")
         axes[1].legend(frameon=False)
         axes[1].grid(True, linestyle=":", linewidth=0.7)
         axes[1].set_title("Loss")
-
-        # # Cross entropies
-        # axes[2].plot(self.cross_entr_s, label=r"$-\mathcal{L}(W_i)$", color=colors[3], linewidth=1.5)
-        # axes[2].set_xlabel("i")
-        # axes[2].legend(frameon=False)
-        # axes[2].grid(True, linestyle=":", linewidth=0.7)
-        # axes[2].set_title("Cross entropy")
 
         fig.suptitle(
             f"Model performance for $\\lambda={self.lamb}$, $\\lambda_W={self.lambda_W}$, $\\lambda_{{\\mathbb{{X}}}}={self.lambda_X}$, $s(\\bm{{\\eta}})={self.s_eta}$",
@@ -112,18 +105,17 @@ class ConvergenceData:
 
 
 class MonteCarloDataSingle:
-    def __init__(self):
-        def __init__(self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X):
-            self.folder = folder
-            self.n = n
-            self.d = d
-            self.K = K
-            self.s_eta = s_eta
-            self.lamb = lamb
-            self.lambda_W = lambda_W
-            self.lambda_X = lambda_X
-            self.filename = self.filename_from_attrs()
-            self.load_from_json(filename=self.filename)
+    def __init__(self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X):
+        self.folder = folder
+        self.n = n
+        self.d = d
+        self.K = K
+        self.s_eta = s_eta
+        self.lamb = lamb
+        self.lambda_W = lambda_W
+        self.lambda_X = lambda_X
+        self.filename = self.filename_from_attrs()
+        self.load_from_json(filename=self.filename)
 
     def from_dict(self, data):
         """Set attributes from dictionary"""
@@ -148,24 +140,24 @@ class MonteCarloDataSingle:
         self.from_dict(data)
 
     def filename_from_attrs(self):
-        return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        return f"data/mc/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
 
 class MonteCarloData:
     def __init__(
-        self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X, compare="lambda"
+        self, folder, n_s, d, K, s_eta_s, lamb_s, lambda_W_s, lambda_X_s, compare="lambda"
     ):
         self.folder = folder
-        self.n = list(n)
+        self.n_s = n_s
         self.d = d
         self.K = K
-        self.s_eta = list(s_eta)
-        self.lamb = list(lamb)
-        self.lambda_W = list(lambda_W)
-        self.lambda_X = list(lambda_X)
+        self.s_eta_s = s_eta_s
+        self.lamb_s = lamb_s
+        self.lambda_W_s = lambda_W_s
+        self.lambda_X_s = lambda_X_s
         self.mc_results = []
         for n, s_eta, lamb, lambda_W, lambda_X in product(
-            self.n, self.s_eta, self.lamb, self.lambda_W, self.lambda_X
+            self.n_s, self.s_eta_s, self.lamb_s, self.lambda_W_s, self.lambda_X_s
         ):
             self.mc_results.append(
                 MonteCarloDataSingle(
@@ -174,18 +166,18 @@ class MonteCarloData:
             )
 
         self.legend_values = {
-            "n": self.n,
-            "s_eta": self.s_eta,
-            "lambda": self.lamb,
-            "lambda_W": self.lambda_W,
-            "lambda_X": self.lambda_X,
+            "n": self.n_s,
+            "s_eta": self.s_eta_s,
+            "lambda": self.lamb_s,
+            "lambda_W": self.lambda_W_s,
+            "lambda_X": self.lambda_X_s,
         }[compare]
         self.legend_label = {
             "n": r"$n",
             "s_eta": r"$s(\eta)$",
             "lambda": r"$\lambda$",
             "lambda_W": r"$\lambda_W$",
-            "lambda_X": r"$\lambda_{{\mathbbm{X}}}$",
+            "lambda_X": r"$\lambda_{{\mathbb{X}}}$",
         }[compare]
 
     def create_plots(self):
@@ -209,12 +201,12 @@ class MonteCarloData:
         for i, mc_result in enumerate(self.mc_results):
             plt.hist(
                 mc_result.losses,
-                range=(np.min(self.losses), np.max(self.losses)),
-                bins=30,
+                range=(np.min(mc_result.losses), np.max(mc_result.losses)),
+                bins="auto",
                 color=colors[i],
                 edgecolor="black",
-                alpha=0.75,
-                label=rf"{self.legend_values[i]}",
+                alpha=0.4,
+                label=self.legend_label + r"$=$" + rf"{self.legend_values[i]}",
             )
 
         plt.xlabel(r"$\|\widetilde{W} - W^*\|_F$", fontsize=12)
@@ -222,6 +214,6 @@ class MonteCarloData:
 
         plt.legend(frameon=True, fontsize=10, loc="upper right")
 
-        plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.7)
+        plt.grid(True, linestyle="-", linewidth=0.5, alpha=0.7)
         plt.tight_layout()
         plt.show()
