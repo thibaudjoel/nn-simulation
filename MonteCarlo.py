@@ -437,13 +437,13 @@ class MonteCarlo:
             ),
             x0=ups_0,
             method="CG",
-            jac=lambda ups: -self.gradient_ups(ups),
+            jac=lambda ups: -self.gradient_ups(ups, trial),
             options={
-                "disp": True,
+                "disp": False,
                 "maxiter": 10000,
                 "gtol": 1e-4,
                 "norm": np.inf,
-                "return_all": True,
+                "return_all": False,
             },
         )
 
