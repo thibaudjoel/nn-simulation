@@ -5,8 +5,7 @@ from itertools import product
 
 
 class ConvergenceData:
-    def __init__(self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X, W_0_factor):
-        self.folder = folder
+    def __init__(self, n, d, K, s_eta, lamb, lambda_W, lambda_X, W_0_factor):
         self.n = n
         self.d = d
         self.K = K
@@ -43,12 +42,12 @@ class ConvergenceData:
         self.from_dict(data)
 
     def filname_from_attrs(self):
-        return f"data/conv/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        return f"data/conv/n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+
 
 class ConvergenceDataMultiple:
     def __init__(
         self,
-        folder,
         n_s,
         d,
         K,
@@ -59,7 +58,6 @@ class ConvergenceDataMultiple:
         W_0_factor_s,
         compare="lambda",
     ):
-        self.folder = folder
         self.n_s = n_s
         self.d = d
         self.K = K
@@ -79,7 +77,6 @@ class ConvergenceDataMultiple:
         ):
             self.conv_results.append(
                 ConvergenceData(
-                    self.folder,
                     n,
                     self.d,
                     self.K,
@@ -108,7 +105,7 @@ class ConvergenceDataMultiple:
             "W_0": r"$\gamma$",
         }[compare]
 
-    def create_plots(self, save_folder=""):
+    def create_plots(self, save=False):
         plt.rcParams.update(
             {
                 "text.usetex": True,
@@ -164,8 +161,8 @@ class ConvergenceDataMultiple:
         axes[2].legend(frameon=False)
         axes[2].grid(True, linestyle=":", linewidth=0.7)
         axes[2].set_title("loss")
-        if save_folder:
-            path = f"/imgs/conv/{save_folder}/n_{self.n_s}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor_s}_s_eta_{self.s_eta_s}_la_{self.lamb_s}_laW_{self.lambda_W_s}_lax_{self.lambda_X_s}.pdf"
+        if save:
+            path = f"/imgs/conv/n_{self.n_s}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor_s}_s_eta_{self.s_eta_s}_la_{self.lamb_s}_laW_{self.lambda_W_s}_lax_{self.lambda_X_s}.pdf"
             plt.savefig(path, dpi=300, bbox_inches="tight")
 
         plt.tight_layout()
@@ -173,8 +170,7 @@ class ConvergenceDataMultiple:
 
 
 class MonteCarloDataSingle:
-    def __init__(self, folder, n, d, K, s_eta, lamb, lambda_W, lambda_X):
-        self.folder = folder
+    def __init__(self, n, d, K, s_eta, lamb, lambda_W, lambda_X):
         self.n = n
         self.d = d
         self.K = K
@@ -208,13 +204,12 @@ class MonteCarloDataSingle:
         self.from_dict(data)
 
     def filename_from_attrs(self):
-        return f"data/mc/{self.folder}/n_{self.n}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        return f"data/mc/n_{self.n}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
 
 class MonteCarloData:
     def __init__(
         self,
-        folder,
         n_s,
         d,
         K,
@@ -224,7 +219,6 @@ class MonteCarloData:
         lambda_X_s,
         compare="lambda",
     ):
-        self.folder = folder
         self.n_s = n_s
         self.d = d
         self.K = K
@@ -237,9 +231,7 @@ class MonteCarloData:
             self.n_s, self.s_eta_s, self.lamb_s, self.lambda_W_s, self.lambda_X_s
         ):
             self.mc_results.append(
-                MonteCarloDataSingle(
-                    self.folder, n, self.d, self.K, s_eta, lamb, lambda_W, lambda_X
-                )
+                MonteCarloDataSingle(n, self.d, self.K, s_eta, lamb, lambda_W, lambda_X)
             )
 
         self.legend_values = {
@@ -257,7 +249,7 @@ class MonteCarloData:
             "lambda_X": r"$\lambda_{{\mathbb{X}}}$",
         }[compare]
 
-    def create_plots(self, save_folder=""):
+    def create_plots(self, save=False):
         plt.rcParams.update(
             {
                 "text.usetex": True,
@@ -293,7 +285,7 @@ class MonteCarloData:
 
         plt.grid(True, linestyle="-", linewidth=0.5, alpha=0.7)
         plt.tight_layout()
-        if save_folder:
-            path = f"/imgs/mc/{save_folder}/n_{self.n_s}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta_s}_la_{self.lamb_s}_laW_{self.lambda_W_s}_lax_{self.lambda_X_s}.pdf"
+        if save:
+            path = f"/imgs/mc/n_{self.n_s}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta_s}_la_{self.lamb_s}_laW_{self.lambda_W_s}_lax_{self.lambda_X_s}.pdf"
             plt.savefig(path, dpi=300, bbox_inches="tight")
         plt.show()

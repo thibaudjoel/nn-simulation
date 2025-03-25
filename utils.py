@@ -117,8 +117,10 @@ def sigma_der(x, alpha=1):
     res[negative] = _negative_sigma_der(x[negative], alpha)
     return res
 
+
 def positive_sigma_sec_der(x, alpha=1):
     return alpha * sigma_der(x, alpha) * np.exp(-alpha * x) / (1 + np.exp(-alpha * x))
+
 
 def negative_sigma_sec_der(x, alpha=1):
     return alpha * sigma_der(x, alpha) / (1 + np.exp(alpha * x))
@@ -265,6 +267,5 @@ def create_folders():
         for sub in subfolders:
             subfolder_path = main_path / sub
             subfolder_path.mkdir(exist_ok=True)
-
 
     print("Folders created successfully.")

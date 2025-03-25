@@ -530,7 +530,7 @@ class MonteCarlo:
 
         return diag - block_diag(*blocks)
 
-    def save_results_as_dic(self, folder=""):
+    def save_results_as_dic(self):
         result_dic = {
             "trials": self.trials,
             "n": self.n,
@@ -553,10 +553,8 @@ class MonteCarlo:
             "log_LH_Ws": self.log_LH_Ws.tolist(),
             "cross_entr_s": self.cross_entr_s.tolist(),
         }
-        if folder:
-            folder += '/'
-        name = f"data/mc/{folder}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
-        # name = f"data/mc/{folder + '/' if folder else ""}n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+
+        name = f"data/mc/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
 
@@ -566,8 +564,8 @@ class MonteCarlo:
         )  # Get available cores
         if fo:
             results = Parallel(n_jobs=num_workers, backend="loky")(
-            delayed(self.maximize_cg)(i) for i in tqdm(range(self.trials))
-        )
+                delayed(self.maximize_cg)(i) for i in tqdm(range(self.trials))
+            )
         else:
             results = Parallel(n_jobs=num_workers, backend="loky")(
                 delayed(self.maximize_newton)(i) for i in tqdm(range(self.trials))

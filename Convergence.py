@@ -401,7 +401,8 @@ class Convergence:
             self.W
             + self.rng.standard_normal((self.K, self.d))
             / np.sqrt(self.d * self.K)
-            * 1e1 * self.W_0_factor
+            * 1e1
+            * self.W_0_factor
         )
 
     def extract_W(self, ups):
@@ -684,7 +685,7 @@ class Convergence:
 
         return diag - block_diag(*blocks)
 
-    def save_results_as_dic(self, folder=""):
+    def save_results_as_dic(self):
         result_dic = {
             "n": self.n,
             "d": self.d,
@@ -708,9 +709,8 @@ class Convergence:
             "cross_entr_s": self.cross_entr_s.tolist(),
             "cross_entr_s_X": self.cross_entr_s_X.tolist(),
         }
-        if folder:
-            folder+= '/'
-        name = f"data/conv/{folder}n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+
+        name = f"data/conv/n_{self.n}_d_{self.d}_K_{self.K}_factor_{self.W_0_factor}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
 
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
