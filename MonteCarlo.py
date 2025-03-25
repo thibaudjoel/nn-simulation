@@ -413,43 +413,41 @@ class MonteCarlo:
             self.log_LHs[trial] = self.stand_log_lh(W_tilde, X_tilde, trial)
             self.log_LH_Ws[trial] = self.stand_log_lh_W(W_tilde, trial)
 
-    # def maximize_cg(self, max_it=10000, gtol=1e-3):
-    #     """
-    #     Performs constrained maximization of the penalized log-likelihood function
-    #     using the Conjugate Gradient (CG) optimization method.
+    def maximize_cg(self, trial):
+        """
+        Performs constrained maximization of the penalized log-likelihood function
+        using the Conjugate Gradient (CG) optimization method.
 
-    #     Parameters:
-    #     -----------
-    #     max_it : int, optional (default=10000)
-    #         The maximum number of iterations for the CG optimization.
-    #     gtol : float, optional (default=1e-3)
-    #         The gradient norm tolerance for stopping criteria.
+        Parameters:
+        -----------
+        max_it : int, optional (default=10000)
+            The maximum number of iterations for the CG optimization.
+        gtol : float, optional (default=1e-3)
+            The gradient norm tolerance for stopping criteria.
 
-    #     """
+        """
 
-    #     W_0 = self.sample_W_0()
-    #     X_0 = sigma(W_0 @ self.X_n)
-    #     ups_0 = self.vectorize(W_0, X_0)
-    #     self.print_status(ups_0)
+        W_0 = self.W_0
+        X_0 = sigma(W_0 @ self.X_n)
+        ups_0 = self.vectorize(W_0, X_0)
 
-    #     res = minimize(
-    #         fun=lambda ups: -self.stand_pen_log_lh(
-    #             self.extract_W(ups), self.extract_X(ups)
-    #         ),
-    #         x0=ups_0,
-    #         method="CG",
-    #         jac=lambda ups: -self.gradient_ups(ups),
-    #         callback=lambda x: self.callback(x),
-    #         options={
-    #             "disp": True,
-    #             "maxiter": max_it,
-    #             "gtol": gtol,
-    #             "norm": np.inf,
-    #             "return_all": True,
-    #         },
-    #     )
+        result = minimize(
+            fun=lambda ups: -self.stand_pen_log_lh(
+                self.extract_W(ups), self.extract_X(ups), trial
+            ),
+            x0=ups_0,
+            method="CG",
+            jac=lambda ups: -self.gradient_ups(ups),
+            options={
+                "disp": True,
+                "maxiter": 10000,
+                "gtol": 1e-4,
+                "norm": np.inf,
+                "return_all": True,
+            },
+        )
 
-    #     self.set_value_hist(res.nit)
+        return result
 
     def fisher(self, ups):
         """
@@ -562,12 +560,17 @@ class MonteCarlo:
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
 
-    def simulate(self):
+    def simulate(self, fo=False):
         num_workers = min(
             multiprocessing.cpu_count(), self.trials
         )  # Get available cores
-        results = Parallel(n_jobs=num_workers, backend="loky")(
-            delayed(self.maximize_newton)(i) for i in tqdm(range(self.trials))
+        if fo:
+            results = Parallel(n_jobs=num_workers, backend="loky")(
+            delayed(self.maximize_cg)(i) for i in tqdm(range(self.trials))
         )
+        else:
+            results = Parallel(n_jobs=num_workers, backend="loky")(
+                delayed(self.maximize_newton)(i) for i in tqdm(range(self.trials))
+            )
         print("Done!")
         self.set_results(results)
