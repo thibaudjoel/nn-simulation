@@ -251,26 +251,20 @@ def create_folders():
     """
     Creates two main directories: 'data' and 'imgs' in the current working directory.
     Each main directory will contain two subdirectories: 'mc' and 'conv'.
-    Inside each 'mc' and 'conv' folder, three additional subdirectories
-    ('low_dim', 'med_dim', 'high_dim') will be created.
 
     If the directories already exist, no changes are made.
     """
     current_folder = Path.cwd()
     main_folders = ["data", "imgs"]
-    subfolders_1 = ["mc", "conv"]
-    subfolders_2 = ["low_dim", "med_dim", "high_dim"]
+    subfolders = ["mc", "conv"]
 
     for main in main_folders:
         main_path = current_folder / main
         main_path.mkdir(exist_ok=True)
 
-        for sub_1 in subfolders_1:
-            subfolder_path_1 = main_path / sub_1
-            subfolder_path_1.mkdir(exist_ok=True)
+        for sub in subfolders:
+            subfolder_path = main_path / sub
+            subfolder_path.mkdir(exist_ok=True)
 
-            for sub_2 in subfolders_2:
-                subfolder_path_2 = subfolder_path_1 / sub_2
-                subfolder_path_2.mkdir(exist_ok=True)
 
     print("Folders created successfully.")
