@@ -8,127 +8,41 @@ from scipy.optimize import minimize
 
 class Convergence:
     """
-    This class implements methods for sampling synthetic categorical data, optimizing model parameters, and evaluating
+    This class implements methods for sampling categorical data, optimizing model parameters, and evaluating
     performance based on likelihood, loss, and prediction error.
 
     Attributes:
     -----------
-    lamb : float
-        Regularization coefficient for the structural penalty.
-    lamb_W : float
-        Regularization coefficient for the weight matrix W.
-    lambda_X: float
-        Regularization coefficient for the nuisance parameter X.
-    n : int
-        Number of samples.
-    d : int
-        Number of features.
-    K : int
-        Number of categories.
-    s_eta : float
-        Probability assigned to a high-probability category.
-    rng : numpy.random.Generator
-        Random number generator instance for reproducibility.
-    exp_Y : np.ndarray
-        Expected values of the response.
-    Y : np.ndarray
-        Observed response.
-    W : np.ndarray
-        True weight matrix of shape (K, d).
-    norm_constants : np.ndarray
-        Normalization constants used to sample features.
-    X_n : np.ndarray
-        Feature matrix.
-    W_tilde : np.ndarray
-        Estimated weight matrix during optimization.
-    X_tilde : np.ndarray
-        Estimated nuisance parameter during optimization.
-    pen_logLHs : np.ndarray
-        Penalized log-likelihood values over iterations.
-    logLH_Ws : np.ndarray
-        Log-likelihood values for W over iterations.
-    iterations : int
-        Number of optimization iterations performed.
-    losses : numpy.ndarray
-        Stores loss values across iterations.
-    losses_X : numpy.ndarray
-        Stores loss values specific to X across iterations.
-    hist : list
-        Intermediate values of full dimensional parameter over iterations.
-    W_s : numpy.ndarray
-        Intermediate values of W over iterations.
-    X_s : numpy.ndarray
-        Intermediate values of X over iterations.
-    cross_entr_s : numpy.ndarray
-        Intermediate values of cross entropies specific to W.
-    cross_entr_s_X : numpy.ndarray
-        Intermediate values of cross entropies specific to X.
-
-    Methods:
-    --------
-    sample_norm_const():
-        Samples normalization constants from a uniform distribution.
-
-    sample_exp_Y():
-        Generates categorical probabilities with an emphasis on a high-probability category.
-
-    sample_Y():
-        Samples categorical labels based on the generated probabilities.
-
-    sample_W():
-        Initializes the weight matrix from a normal distribution.
-
-    sample_features():
-        Computes feature matrix X_n using inverse transformations.
-
-    stand_log_lh_W(W):
-        Computes the standardized log-likelihood for a given weight matrix.
-
-    stand_log_lh(W, X):
-        Computes the full dimensional standardized log-likelihood.
-
-    stand_pen_log_lh(W, X):
-        Computes the full dimensional standardized penalized log-likelihood .
-
-    pred_err(W):
-        Computes prediction error using W.
-
-    pred_err_X(X):
-        Computes prediction error given the nuisance parameter X.
-
-    cross_entr(W):
-        Computes the Frobenius norm difference between true and estimated W.
-
-    cross_entr_X(X):
-        Computes the Frobenius norm difference between X and its estimated form.
-
-    plot_convergence():
-        Plots the convergence of the penalized log-likelihood over iterations.
-
-    gradient_X(W):
-        Computes the gradient of the loss function with respect to X.
-
-    gradient_W(W, X):
-        Computes the gradient of the loss function with respect to W.
-
-    maximize_newton(max_it=1000, eps=1e-3):
-        Optimizes W and X using the Newton-CG method.
-
-    maximize_cg(max_it=1000, eps=1e-3):
-        Optimizes W and X using the Conjugate Gradient method.
-
-    fisher(x):
-        Computes the Fisher information matrix for second-order optimization.
-
-    var_Y(X):
-        Computes the covariance matrix of multinomially distributed data.
-
+    lamb (float): Regularization coefficient for the structural penalty.
+    lamb_W (float): Regularization coefficient for the weight matrix W.
+    lambda_X (float): Regularization coefficient for the nuisance parameter X.
+    n (int): Number of samples.
+    d (int): Number of features.
+    K (int): Number of categories.
+    s_eta (float): Probability assigned to a high-probability category.
+    rng (numpy.random.Generator): Random number generator instance for reproducibility.
+    exp_Y (np.ndarray): Expected values of the response.
+    Y (np.ndarray): Observed response.
+    W (np.ndarray): True weight matrix of shape (K, d).
+    norm_constants (np.ndarray): Normalization constants used to sample features.
+    X_n (np.ndarray): Feature matrix.
+    W_tilde (np.ndarray): Estimated weight matrix during optimization.
+    X_tilde (np.ndarray): Estimated nuisance parameter during optimization.
+    pen_logLHs (np.ndarray): Penalized log-likelihood values over iterations.
+    logLH_Ws (np.ndarray): Log-likelihood values for W over iterations.
+    iterations (int): Number of optimization iterations performed.
+    losses (numpy.ndarray): Stores loss values across iterations.
+    losses_X (numpy.ndarray): Stores loss values specific to X across iterations.
+    hist (list): Intermediate values of full dimensional parameter over iterations.
+    W_s (numpy.ndarray): Intermediate values of W over iterations.
+    X_s (numpy.ndarray): Intermediate values of X over iterations.
+    cross_entr_s (numpy.ndarray): Intermediate values of cross entropies specific to W.
+    cross_entr_s_X (numpy.ndarray): Intermediate values of cross entropies specific to X.
     """
 
     def __init__(self, n, d, K, s_eta, rng, lamb, lambda_W, lambda_X, W_0_factor=1):
         """
         Initializes the class with given parameters and preallocates necessary variables.
-
         """
         self.rng = rng
         self.n = n
@@ -178,7 +92,7 @@ class Convergence:
 
         Returns:
         --------
-        np.ndarray
+        numpy.ndarray
             A 2D array of shape (self.K, self.n), where each column contains
             the adjusted probability distributions over `K` categories.
         """
@@ -233,7 +147,7 @@ class Convergence:
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             A one-hot encoded matrix `Y` of shape (K, N), where K is the number of categories and N is the number of samples.
             Each column represents a sample, with a 1 in the position corresponding to the sampled category and 0 elsewhere.
         """
@@ -244,7 +158,7 @@ class Convergence:
         Computes the standardized log-likelihood in the non-extended parameter
 
         Parameters:
-        W (ndarray): Weight matrix.
+        W (np.ndarray): Weight matrix.
 
         Returns:
         --------
@@ -260,9 +174,9 @@ class Convergence:
         Computes the standardized log-likelihood of the full parameter.
 
         Parameters:
-        W : ndarray
+        W : np.ndarray
             Weight matrix.
-        X : ndarray
+        X : np.ndarray
             Current latent variable representation.
 
         Returns:
@@ -280,14 +194,14 @@ class Convergence:
         Computes the standardized penalized log-likelihood of the full parameter.
 
         Parameters:
-        W : numpy.ndarray
+        W : np.ndarray
             Weight matrix.
-        X : numpy.ndarray
+        X : np.ndarray
             Nuisance parameter.
 
         Returns:
         --------
-        float: The penalized log-likelihood.
+        float: The standardized penalized log-likelihood.
         """
 
         return (
@@ -297,15 +211,65 @@ class Convergence:
         )
 
     def cross_entr(self, W):
+        """
+        Computes the cross-entropy between the predicted probabilities and the true categories
+        based on the weight matrix `W`.
+
+        Parameters:
+        -----------
+        W (np.ndarray): Weight matrix.
+
+        Returns:
+        --------
+        float
+            The computed cross-entropy.
+        """
         return -np.sum(self.Y * np.log(softmax(sigma(W @ self.X_n), axis=0))) / self.n
 
     def cross_entr_X(self, X):
+        """
+        Computes the cross-entropy between the predicted probabilities and the true categories
+        based on the nuisance parameter `X`.
+
+        Parameters:
+        -----------
+        X (numpy.ndarray): Nuisance parameter.
+
+        Returns:
+        --------
+        float
+            The computed cross-entropy.
+        """
         return -np.sum(self.Y * np.log(softmax(X, axis=0))) / self.n
 
     def loss(self, W):
+        """
+        Computes the Frobenius norm loss between the true and estimated weight matrices.
+
+        Parameters:
+        -----------
+        W (np.ndarray): Weight matrix.
+
+        Returns:
+        --------
+        float
+            The computed Frobenius norm loss.
+        """
         return np.linalg.norm(self.W - W, "fro")
 
     def loss_X(self, X):
+        """
+        Computes the Frobenius norm loss between the true and estimated nuisance parameters.
+
+        Parameters:
+        -----------
+        X (np.ndarray): Nuisance parameter.
+
+        Returns:
+        --------
+        float
+            The computed Frobenius norm loss for `X`.
+        """
         return np.linalg.norm(X - sigma(self.W @ self.X_n), "fro")
 
     def gradient_X(self, W, X):
@@ -315,21 +279,12 @@ class Convergence:
         Parameters:
         -----------
 
-        W : numpy.ndarray
-            The weight matrix. Shape: (K, d)
-
-        X : numpy.ndarray
-            The input matrix. Shape: (K, n)
-
-        lamb : float
-            The scaling factor for the structured loss term.
-
-        lambda_X : float
-            The regularization strength for the input matrix `X`.
+        W (np.ndarray): The weight matrix. Shape: (K, d)
+        X (np.ndarray): The input matrix. Shape: (K, n)
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             The gradient of the loss with respect to the input matrix `X`, including both the structured loss term and the L2 regularization term.
         """
         gradient_phi = self.Y - X * softmax(X, axis=0)
@@ -344,15 +299,12 @@ class Convergence:
 
         Parameters:
         -----------
-        W : numpy.ndarray
-            The weight matrix for the model. Shape: (m, n), where m is the number of output units and n is the number of input features.
-
-        X : numpy.ndarray
-            The feature matrix. Shape: (m, N), where m is the number of output units and N is the number of data samples.
+        W (np.ndarray): The weight matrix for the model. Shape: (m, n), where m is the number of output units and n is the number of input features.
+        X (np.ndarray): The feature matrix. Shape: (m, N), where m is the number of output units and N is the number of data samples.
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             The gradient of the loss with respect to the weight matrix `W`. This includes both the structured loss term and the L2 regularization term.
         """
         # gradient of structural penalty
@@ -376,8 +328,7 @@ class Convergence:
 
         Parameters:
         -----------
-        ups : numpy.ndarray
-            The vectorized full dimensional parameter.
+        ups (np.ndarray): The vectorized full dimensional parameter.
 
         Returns:
         --------
@@ -393,7 +344,7 @@ class Convergence:
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             A perturbed version of the weight matrix W, sampled from a normal distribution.
         """
 
@@ -411,12 +362,11 @@ class Convergence:
 
         Parameters:
         -----------
-        ups : numpy.ndarray
-            Vectorized full dimensional parameter.
+        ups (np.ndarray): Vectorized full dimensional parameter.
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             Weight matrix W of shape (K, d).
         """
         return ups[: self.K * self.d].reshape(self.W.shape)
@@ -427,12 +377,11 @@ class Convergence:
 
         Parameters:
         -----------
-        ups : numpy.ndarray
-            Vectorized full dimensional parameter.
+        ups (np.ndarray): Vectorized full dimensional parameter.
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             Nuisance parameter X of shape (K, n).
         """
         return ups[self.K * self.d :].reshape(self.Y.shape)
@@ -443,12 +392,11 @@ class Convergence:
 
         Parameters:
         -----------
-        ups : numpy.ndarray
-            Vectorized full dimensional parameter.
+        ups (np.ndarray): Vectorized full dimensional parameter.
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             Vectorized gradient of the penalized log-likelihood at ups.
         """
         W = self.extract_W(ups)
@@ -461,14 +409,12 @@ class Convergence:
 
         Parameters:
         -----------
-        W : numpy.ndarray
-            Weight matrix of shape (K, d).
-        X : numpy.ndarray
-            Nuisance parameter of shape (K, n).
+        W (np.ndarray): Weight matrix of shape (K, d).
+        X (np.ndarray): Nuisance parameter of shape (K, n).
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             Flattened full dimensional parameter.
         """
         return np.concatenate((W.flatten(), X.flatten()))
@@ -479,8 +425,7 @@ class Convergence:
 
         Parameters:
         -----------
-        ups : numpy.ndarray
-            Flattened full dimensional parameter.
+        ups (np.ndarray): Flattened full dimensional parameter.
 
         Returns:
         --------
@@ -502,8 +447,7 @@ class Convergence:
 
         Parameters:
         -----------
-        iterations : int
-            The number of iterations performed during optimization.
+        iterations (int): The number of iterations performed during optimization.
 
         Returns:
         --------
@@ -537,9 +481,14 @@ class Convergence:
         self.W_tilde = self.W_s[-1, :, :]
         self.X_tilde = self.X_s[-1, :, :]
 
-    def maximize_newton(self, max_it=1000, eps=1e-3):
+    def maximize_newton(self, max_it=2000, eps=1e-3):
         """
         Maximizes the penalized log-likelihood function using the Newton-CG optimization method.
+
+        Parameters:
+        -----------
+        max_it (int, optional (default=2000)): The maximum number of iterations for the optimization.
+        eps (float, optional (default=1e-3)): The tolerance for the optimization to stop.
 
         Returns:
         --------
@@ -573,10 +522,8 @@ class Convergence:
 
         Parameters:
         -----------
-        max_it : int, optional (default=10000)
-            The maximum number of iterations for the CG optimization.
-        gtol : float, optional (default=1e-3)
-            The gradient norm tolerance for stopping criteria.
+        max_it (int, optional (default=10000)): The maximum number of iterations for the CG optimization.
+        gtol (float, optional (default=1e-3)): The gradient norm tolerance for stopping criteria.
 
         """
 
@@ -606,16 +553,15 @@ class Convergence:
 
     def fisher(self, ups):
         """
-        Computes the Fisher Information Matrix (FIM) for the model @ ups = vec(W, X)
+        Computes the Fisher Information Matrix (FIM) for the model @ ups = (W, X)
 
         Parameters:
         -----------
-        ups : numpy.ndarray
-            The full dimensional parameter as a flattened vector.
+        ups (np.ndarray): The full dimensional parameter as a flattened vector.
 
         Returns:
         --------
-        numpy.ndarray
+        np.ndarray
             The Fisher Information Matrix.
         """
         W = self.extract_W(ups)
@@ -667,13 +613,11 @@ class Convergence:
 
         Parameters:
         -----------
-        X : numpy.ndarray, shape (K, n)
-            A matrix where each column represents a probability distribution
-            (before applying softmax).
+        X (np.ndarray, shape (K, n)): A matrix where each column represents a probability distribution (before applying softmax).
 
         Returns:
         --------
-        numpy.ndarray, shape (Kn, Kn)
+        np.ndarray, shape (Kn, Kn)
             The covariance matrix of the random vectors.
         """
         probabilities = softmax(X, axis=0)
@@ -686,6 +630,14 @@ class Convergence:
         return diag - block_diag(*blocks)
 
     def save_results_as_dic(self):
+        """
+        Saves the results of the optimization process as a dictionary in JSON format.
+
+        Returns:
+        --------
+        None
+            Writes the results to a JSON file for later analysis.
+        """
         result_dic = {
             "n": self.n,
             "d": self.d,
