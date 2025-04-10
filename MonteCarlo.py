@@ -12,6 +12,26 @@ from utils import sigma_inv, sigma, sigma_der, sigma_sec_der
 
 
 class MonteCarlo:
+    """
+    Class to perform Monte Carlo simulations for estimating model parameters via penalized
+    log-likelihood maximization. The class samples data from a categorical distribution and
+    optimizes parameters using Newton-CG or Conjugate Gradient methods.
+
+    Attributes:
+    -----------
+    trials (int): Number of trials to simulate.
+    lamb (float): Regularization coefficient for the structural penalty.
+    lambda_W (float): Regularization coefficient for the weight matrix W.
+    lambda_X (float): Regularization coefficient for the nuisance parameter X.
+    n (int): Number of samples.
+    d (int): Number of features.
+    K (int): Number of categories.
+    s_eta (float): Probability of the high probability category.
+    rng (np.random.Generator): Random number generator instance.
+    max_it (int): Maximum number of iterations for optimization.
+    eps (float): Convergence tolerance for optimization.
+    """
+
     def __init__(
         self,
         trials,
@@ -23,9 +43,26 @@ class MonteCarlo:
         K,
         s_eta,
         rng,
-        max_it=1000,
+        max_it=2000,
         eps=1e-7,
     ):
+        """
+        Initializes the MonteCarlo simulation class.
+
+        Parameters:
+        -----------
+        trials (int): Number of trials to simulate.
+        lamb (float): Regularization coefficient for the structural penalty.
+        lambda_W (float): Regularization coefficient for the weight matrix W.
+        lambda_X (float): Regularization coefficient for the nuisance parameter X.
+        n (int): Number of samples.
+        d (int): Number of features.
+        K (int): Number of categories.
+        s_eta (float): Probability of the high probability category.
+        rng (np.random.Generator): Random number generator instance.
+        max_it (int): Maximum number of iterations for optimization.
+        eps (float): Convergence tolerance for optimization.
+        """
         self.rng = rng
         self.trials = trials
         self.lamb = lamb
@@ -51,13 +88,6 @@ class MonteCarlo:
         self.log_LHs = np.zeros(trials)
         self.log_LH_Ws = np.zeros(trials)
         self.iterations = np.zeros(trials)
-
-        # self.D = metr_tens(self.W, self.X_n, self.lamb, self.lambda_W)
-        # self.Sigma = var_Y(self.W, self.X_n)
-        # self.Var_ups = block_diag(np.zeros((K * d, K * d)), self.Sigma)
-        # self.F_inv = inv_Fisher(self.W, self.X_n, self.lamb, self.lambda_W, self.lambda_X)
-        # self.eff_rad = eff_rad(self.D, self.Var_ups, self.F_inv, self.n)
-        # self.eff_dim
 
     def sample_norm_const(self):
         """
@@ -154,11 +184,13 @@ class MonteCarlo:
         Computes the standardized log-likelihood in the non-extended parameter
 
         Parameters:
-        W (ndarray): Weight matrix.
+        -----------
+        W (np.ndarray): Weight matrix of shape (K, d).
+        trial (int): Trial index.
 
         Returns:
         --------
-        float: The computed log-likelihood.
+        float: Standardized log-likelihood in W.
         """
         return (
             np.sum(self.Y[trial, :, :] * sigma(W @ self.X_n))
@@ -170,14 +202,14 @@ class MonteCarlo:
         Computes the standardized log-likelihood of the full parameter.
 
         Parameters:
-        W : ndarray
-            Weight matrix.
-        X : ndarray
-            Current latent variable representation.
+        -----------
+        W (np.ndarray): Weight matrix of shape (K, d).
+        X (np.ndarray): Latent variable matrix of shape (K, n).
+        trial (int): Trial index.
 
         Returns:
         --------
-        float: The computed log-likelihood.
+        float: Standardized log-likelihood in (W, X)
         """
         return (
             np.sum(self.Y[trial, :, :] * X)
@@ -187,17 +219,17 @@ class MonteCarlo:
 
     def stand_pen_log_lh(self, W, X, trial):
         """
-        Computes the standardized penalized log-likelihood of the full parameter.
+        Computes the penalized standardized log-likelihood.
 
         Parameters:
-        W : numpy.ndarray
-            Weight matrix.
-        X : numpy.ndarray
-            Nuisance parameter.
+        -----------
+        W (np.ndarray): Weight matrix of shape (K, d).
+        X (np.ndarray): Latent variable matrix of shape (K, n).
+        trial (int): Trial index.
 
         Returns:
         --------
-        float: The penalized log-likelihood.
+        float: Penalized log-likelihood.
         """
 
         return (
@@ -207,37 +239,50 @@ class MonteCarlo:
         )
 
     def cross_entr(self, W, trial):
+        """
+        Computes cross-entropy loss for given weights and trial.
+
+        Parameters:
+        -----------
+        W (np.ndarray): Weight matrix of shape (K, d).
+        trial (int): Trial index.
+
+        Returns:
+        --------
+        float: Cross-entropy loss.
+        """
         return (
             -np.sum(self.Y[trial, :, :] * np.log(softmax(sigma(W @ self.X_n), axis=0)))
             / self.n
         )
 
     def loss(self, W):
+        """
+        Computes Frobenius norm difference between true and estimated weights.
+
+        Parameters:
+        -----------
+        W (np.ndarray): Estimated weight matrix of shape (K, d).
+
+        Returns:
+        --------
+        float: Frobenius norm loss.
+        """
         return np.linalg.norm(self.W - W, "fro")
 
     def gradient_X(self, W, X, trial):
         """
-        Computes the gradient of the loss function with respect to the nuisance parameter `X`
+        Computes gradient of the penalized log-likelihood with respect to X.
 
         Parameters:
         -----------
-
-        W : numpy.ndarray
-            The weight matrix. Shape: (K, d)
-
-        X : numpy.ndarray
-            The input matrix. Shape: (K, n)
-
-        lamb : float
-            The scaling factor for the structured loss term.
-
-        lambda_X : float
-            The regularization strength for the input matrix `X`.
+        W (np.ndarray): Weight matrix of shape (K, d).
+        X (np.ndarray): Nuisance parameter of shape (K, n).
+        trial (int): Trial index.
 
         Returns:
         --------
-        numpy.ndarray
-            The gradient of the loss with respect to the input matrix `X`, including both the structured loss term and the L2 regularization term.
+        np.ndarray: Gradient w.r.t. X of shape (K, n).
         """
         gradient_phi = self.Y[trial, :, :] - X * softmax(X, axis=0)
         gradient_struc = -self.lamb * (X - sigma(W @ self.X_n))
@@ -247,20 +292,16 @@ class MonteCarlo:
 
     def gradient_W(self, W, X):
         """
-        Computes the gradient of the loss function with respect to the weight matrix `W`.
+        Computes gradient of the penalized log-likelihood with respect to W.
 
         Parameters:
         -----------
-        W : numpy.ndarray
-            The weight matrix for the model. Shape: (m, n), where m is the number of output units and n is the number of input features.
-
-        X : numpy.ndarray
-            The feature matrix. Shape: (m, N), where m is the number of output units and N is the number of data samples.
+        W (np.ndarray): Weight matrix of shape (K, d).
+        X (np.ndarray): Nuisance parameter of shape (K, n).
 
         Returns:
         --------
-        numpy.ndarray
-            The gradient of the loss with respect to the weight matrix `W`. This includes both the structured loss term and the L2 regularization term.
+        np.ndarray: Gradient w.r.t. W of shape (K, d).
         """
         # gradient of structural penalty
         gradient_struc = self.lamb * np.sum(
@@ -328,7 +369,7 @@ class MonteCarlo:
 
     def gradient_ups(self, ups, trial):
         """
-        Computes the gradient of the penalized log-likelihood at ups.
+        Computes the gradient of the penalized log-likelihood at upsilon = (W, X).
 
         Parameters:
         -----------
@@ -366,10 +407,14 @@ class MonteCarlo:
         """
         Maximizes the penalized log-likelihood function using the Newton-CG optimization method.
 
+        Parameters:
+        -----------
+        trial (int): Trial index.
+
         Returns:
         --------
-        None
-            The function updates internal attributes.
+        OptimizeResult: Result object from SciPy optimization.
+
         """
         W_0 = self.W_0
         X_0 = sigma(W_0 @ self.X_n)
@@ -391,21 +436,21 @@ class MonteCarlo:
 
     def set_results(self, results):
         """
-        Stores the optimization history, including loss, log-likelihood, and predictions.
+        Stores optimization results from all trials.
 
         Parameters:
         -----------
-        iterations : int
-            The number of iterations performed during optimization.
+        results (list): List of optimization result objects.
 
         Returns:
         --------
         None
-            Updates the history of W, X, loss values, and log-likelihoods.
         """
         for trial in range(self.trials):
             W_tilde = results[trial].x[: self.K * self.d].reshape((self.K, self.d))
             X_tilde = results[trial].x[self.K * self.d :].reshape((self.K, self.n))
+            self.W_tilde_s[trial, :, :] = W_tilde
+            self.X_tilde_s[trial, :, :] = X_tilde
             self.iterations[trial] = results[trial].nit
             self.losses[trial] = self.loss(W_tilde)
             self.cross_entr_s[trial] = self.cross_entr(W_tilde, trial)
@@ -415,18 +460,16 @@ class MonteCarlo:
 
     def maximize_cg(self, trial):
         """
-        Performs constrained maximization of the penalized log-likelihood function
-        using the Conjugate Gradient (CG) optimization method.
+        Maximizes penalized log-likelihood using CG method.
 
         Parameters:
         -----------
-        max_it : int, optional (default=10000)
-            The maximum number of iterations for the CG optimization.
-        gtol : float, optional (default=1e-3)
-            The gradient norm tolerance for stopping criteria.
+        trial (int): Trial index.
 
+        Returns:
+        --------
+        OptimizeResult: Result object from SciPy optimization.
         """
-
         W_0 = self.W_0
         X_0 = sigma(W_0 @ self.X_n)
         ups_0 = self.vectorize(W_0, X_0)
@@ -531,6 +574,13 @@ class MonteCarlo:
         return diag - block_diag(*blocks)
 
     def save_results_as_dic(self):
+        """
+        Saves all simulation results to a JSON file.
+
+        Returns:
+        --------
+        None
+        """
         result_dic = {
             "trials": self.trials,
             "n": self.n,
@@ -554,11 +604,22 @@ class MonteCarlo:
             "cross_entr_s": self.cross_entr_s.tolist(),
         }
 
-        name = f"data/mc/n_{self.n}_d_{self.d}_K_{self.K}s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
+        name = f"data/mc/n_{self.n}_d_{self.d}_K_{self.K}_s_eta_{self.s_eta}_la_{self.lamb}_laW_{self.lambda_W}_lax_{self.lambda_X}.json"
         with open(name, "w") as json_file:
             json.dump(result_dic, json_file, indent=4)
 
     def simulate(self, fo=False):
+        """
+        Runs the full Monte Carlo simulation in parallel.
+
+        Parameters:
+        -----------
+        fo (bool): If True, use Conjugate Gradient (CG); else use Newton-CG.
+
+        Returns:
+        --------
+        None
+        """
         num_workers = min(
             multiprocessing.cpu_count(), self.trials
         )  # Get available cores
