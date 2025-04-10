@@ -183,13 +183,13 @@ class ConvergenceDataMultiple:
         plt.rcParams.update(
             {
                 "text.usetex": True,
-                "font.family": "mathpazo",
+                "font.family": "serif",
                 "axes.titlesize": 12,
                 "axes.labelsize": 12,
                 "legend.fontsize": 12,
                 "xtick.labelsize": 10,
                 "ytick.labelsize": 10,
-                "text.latex.preamble": r"\usepackage{amsfonts, bm}",
+                "text.latex.preamble": r"\usepackage{amsfonts, bm, mathpazo}",
                 "axes.facecolor": "white",
                 "grid.color": "grey",
             }
@@ -227,7 +227,7 @@ class ConvergenceDataMultiple:
         axes[1].spines["left"].set_color("black")
         axes[1].set_xlabel(r"$i$")
         axes[1].set_ylabel(r"$\|\widetilde{W}_i-W^*\|_F$")
-        axes[1].legend(frameon=True, fontsize=10, loc="best")
+        axes[1].legend(frameon=True, fontsize=10, loc="best", )
         axes[1].grid(True, linestyle="-", linewidth=0.3, alpha=0.7)
         axes[1].set_title("loss")
         plt.tight_layout()
@@ -398,11 +398,11 @@ class MonteCarloData:
         plt.rcParams.update(
             {
                 "text.usetex": True,
-                "font.family": "mathpazo",
+                "font.family": "serif",
                 "axes.labelsize": 12,
                 "xtick.labelsize": 10,
                 "ytick.labelsize": 10,
-                "text.latex.preamble": r"\usepackage{amsfonts, bm}",
+                "text.latex.preamble": r"\usepackage{amsfonts, bm, mathpazo}",
                 "axes.facecolor": "white",
             }
         )
