@@ -1,6 +1,5 @@
 import numpy as np
 from pathlib import Path
-from scipy.linalg import block_diag
 
 
 def positive_sigma(x, alpha):
@@ -213,40 +212,6 @@ def stable_softmax(x):
     x_max = np.max(x, axis=0, keepdims=True)
     exp_x = np.exp(x - x_max)
     return exp_x / np.sum(exp_x, axis=0)
-
-
-def metr_tens(W, X_n, lamb, lambda_W):
-    d, n = X_n.shape
-    K = W.shape[0]
-    inter = np.einsum("ij, jk-> ikj", X_n, X_n.T, order="K").reshape(
-        (d, d * n), order="F"
-    )
-    sig_der_square = np.power(sigma(W @ X_n), 2)
-    factors = np.kron(sig_der_square, np.ones((1, d)))
-    F_WW = block_diag(
-        *[
-            np.sum((factors[i, :] * inter).reshape((d, d, n), order="A"), axis=2)
-            for i in range(K)
-        ]
-    ) + lambda_W * np.eye(K * d)
-    return np.block(
-        [
-            [F_WW, np.zeros((K * d, K * n))],
-            [np.zeros((K * n, K * d)), lamb * np.eye(K * n)],
-        ]
-    )
-
-
-def eff_rad(D, Var_ups, F_inv, n):
-    print("D:" + str(D.shape))
-    print("F_inv:" + str(F_inv.shape))
-    print("Var_ups:" + str(Var_ups.shape))
-    B = D @ F_inv @ Var_ups @ F_inv @ D
-    return np.sqrt(
-        np.linalg.trace(B)
-        + 2 * np.sqrt(np.log(n) * np.linalg.trace(B @ B))
-        + 2 * np.log(n) * np.linalg.norm(B, 2)
-    )
 
 
 def create_folders():
