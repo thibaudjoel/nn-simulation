@@ -12,7 +12,7 @@ This repository contains the code used for the numerical experiments in my Maste
 
 - **`utils.py`**  
   - Helper functions to compute the activation function $\sigma$ and its derivatives.
-  - Sets up folder structure for saving experiment results.
+  - Helper function to set up folder structure for experiment results.
 
 - **`Convergence.py`**  
   - Simulates Multinomial data.
@@ -42,7 +42,8 @@ This repository contains the code used for the numerical experiments in my Maste
 
 ## Folder Structure
 
-Before running experiments, ensure the following directory structure is created using `create_folders()` from `utils.py`:
+> **Important:**  
+> Run `create_folders()` from `utils.py` before executing any simulations. Otherwise, the code will fail when trying to save output files. This will create the following directory structure in the current working directory:
 
 ```text
 data/
@@ -55,8 +56,7 @@ imgs/
 ```
 
 
-> **Important:**  
-> Run `create_folders()` before executing any simulations. Otherwise, the code will fail when trying to save output files.
+
 
 ---
 
